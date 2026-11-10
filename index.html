@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E1A2E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Carga">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAALVUlEQVR4Xu3da3BU1QEH8HOf+8xjQ4CEgOEZIIZHQKUIKlNiMxbEIlYdpdovOrUqnXGmH3RqnU5b1I62Y9XR2mqp1BlbOq1VBhUBLa9KU1QIECGEUJIIhJDA7maze3f33s66nTQthOw5Z3fvnsv/N36UTHLz3/8999xzzz33XPTQHIDmAHpoDkBzAD00B6A5gB6aA9AcQA/NAWgOoIfmADQH0ENzAJoD6KE5AM0B9NAcgOYAemgOQHMAPTQHoDmAHpoD0BxAD80BaA6gh+YANAfQQ3MAmgPooTlgWOoefwkuD1wUmgMw5gB6aA5AcwA9NAegOYAemgPQHEAPzQFoDqCH5gA0B9BDcwCaA+ihOQDNAfTQHIDmAHpoDkBzAD00B6A5gB6aA9AcQA/NAcP6N6/ZXmkQURMfAAAAAElFTkSuQmCC"></head><body>
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{color-scheme:light}
+/* Layout: one page, top to bottom: verdict on the latest session -> 4 core metrics vs Backs -> 4 simple charts -> matches -> full history */
+:root{
+  --bg:#F4F1E9; --surface:#FFFFFF; --surface-2:#EDE8DB; --line:#DAD3C2;
+  --ink:#1C201C; --ink-muted:#5C6862;
+  --maroon:#7A1F2B; --maroon-soft:#C9949B;
+  --good:#2E6B39; --good-bg:#E1EEDF; --warn:#9A6A0B; --warn-bg:#F6EAC8; --bad:#A6362E; --bad-bg:#F6DEDA; --info:#2C5F8A; --info-bg:#DDE9F3;
+  --font-display:'Oswald','Arial Narrow',sans-serif; --font-body:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2{font-family:var(--font-display);font-weight:600;margin:0;text-wrap:balance}
+h1{font-size:28px;letter-spacing:.01em}
+h2{font-size:20px;letter-spacing:.02em;text-transform:uppercase}
+.sub{color:var(--ink-muted);font-size:13px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:8px 16px;flex-wrap:wrap}
+section{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}
+.tag{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted)}
+.verdict{font-size:22px;line-height:1.3;font-weight:600;margin:6px 0 0;text-wrap:balance}
+.lights{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.light{border-radius:8px;padding:10px 12px;min-width:0}
+.light small{display:block;font-size:12px;color:var(--ink-muted);margin-bottom:2px}
+.light b{display:block;font-size:15px}
+.light span{display:block;font-size:12px;margin-top:2px;color:var(--ink-muted)}
+.s-good{background:var(--good-bg)} .s-warn{background:var(--warn-bg)} .s-bad{background:var(--bad-bg)} .s-info{background:var(--info-bg)}
+.t-good{color:var(--good)} .t-warn{color:var(--warn)} .t-bad{color:var(--bad)} .t-info{color:var(--info)}
+.metrics{margin-top:16px;display:flex;flex-direction:column}
+.mrow{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,.8fr) minmax(0,.9fr) minmax(0,.8fr) minmax(0,1fr);gap:8px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.mrow.mh{border-top:0;padding:0 0 6px;font-size:12px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.05em}
+.mname{font-weight:600}
+.mname small{display:block;font-weight:400;color:var(--ink-muted);font-size:12px}
+.num{font-variant-numeric:tabular-nums;font-size:18px;font-weight:600}
+.num.avg{font-weight:400;color:var(--ink-muted)}
+.num small.d{display:block;font-size:12px;font-weight:600}
+.goal{margin-top:16px;border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.goal b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:6px}
+.gbar{position:relative;height:12px;background:var(--surface-2);border-radius:6px;margin:10px 0 6px}
+.gbar i{display:block;height:100%;background:var(--maroon);border-radius:6px}
+.gbar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--good);text-decoration:none}
+.pm{margin-top:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pm div{background:var(--surface-2);border-radius:8px;padding:10px 12px}
+.pm small{display:block;color:var(--ink-muted);font-size:12px}
+.pill{display:inline-flex;gap:5px;align-items:center;font-size:13px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.todo{margin-top:16px;background:var(--surface-2);border-radius:8px;padding:12px 14px}
+.todo b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:0;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--maroon);color:var(--surface)}
+.seg button:focus-visible,.log tr.row:focus-visible{outline:2px solid var(--maroon);outline-offset:-2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink-muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.legend i.ln{height:0;border-top:3px solid var(--pitch-2);border-radius:2px;width:18px;vertical-align:3px}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.chart-card h3{margin:0;font-size:16px}
+.chart-card p{margin:2px 0 10px;font-size:13px;color:var(--ink-muted)}
+.cwrap{position:relative;height:210px}
+.weeks{display:flex;flex-direction:column;gap:8px}
+.wk{display:grid;grid-template-columns:96px minmax(0,1fr) 110px 96px;gap:12px;align-items:center;font-size:14px}
+.wk .bar{height:12px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.wk .bar i{display:block;height:100%;background:var(--maroon);border-radius:6px}
+.wk .v{font-variant-numeric:tabular-nums;text-align:right}
+.wk .ok{font-weight:600}
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.game b{font-size:16px} .game .big{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.game .big small{font-size:13px;font-weight:400;color:var(--ink-muted)}
+.scroll{overflow-x:auto}
+table.log{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.log th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.log th:first-child,.log td:first-child,.log th:nth-child(2),.log td:nth-child(2){text-align:left}
+.log td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.log tr.row{cursor:pointer}
+.log tr.row:hover td{background:var(--surface-2)}
+.log tr.note td{white-space:normal;text-align:left;color:var(--ink-muted);font-size:13px;background:var(--surface-2)}
+.log .m{color:var(--maroon);font-weight:600}
+.pick{display:flex;align-items:center;gap:10px}
+.pick select{font:inherit;font-size:14px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%;min-width:0}
+.pick select:focus-visible,details.more summary:focus-visible{outline:2px solid var(--maroon);outline-offset:2px}
+details.more{margin-top:16px}
+details.more summary{cursor:pointer;font-weight:600;font-size:14px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary::after{content:'▾';color:var(--ink-muted)}
+details.more[open] summary::after{content:'▴'}
+.cmp{grid-column:1 / -1;display:flex;flex-direction:column;gap:3px}
+.cmp i{display:block;height:6px;border-radius:3px}
+.cl{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink-muted);margin-top:10px}
+.cl i{display:inline-block;width:12px;height:6px;border-radius:3px;margin-right:5px;vertical-align:1px}
+.tr{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tr div{background:var(--surface-2);border-radius:8px;padding:10px 12px}
+.tr small{display:block;color:var(--ink-muted);font-size:12px}
+.gloss{font-size:13px;color:var(--ink-muted);display:grid;gap:6px}
+.gloss b{color:var(--ink)}
+@media (max-width:640px){
+  .charts{grid-template-columns:minmax(0,1fr)}
+  .lights{grid-template-columns:minmax(0,1fr)}
+  .wk{grid-template-columns:88px minmax(0,1fr) 56px 54px;gap:6px;font-size:12px}
+  .wk .hide-m{display:none}
+  .mrow{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mrow .mname{grid-column:1 / -1}
+  .mrow .pillcell{grid-column:1 / -1}
+  .mrow.mh .pillcell,.mrow.mh .mh-n{display:none}
+  .pm{grid-template-columns:minmax(0,1fr)}
+  .verdict{font-size:19px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+.pos .mb{margin-top:18px}
+.pos .mh{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between}
+.pos .mh b{font-size:16px}
+.pos .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin:8px 0 10px}
+.pos .sum div{background:var(--surface-2);border-radius:8px;padding:8px 12px;font-size:14px}
+.pos .sum small{display:block;color:var(--ink-muted);font-size:12px}
+.pr{display:grid;grid-template-columns:minmax(96px,150px) minmax(0,1fr) 64px;gap:10px;align-items:center;font-size:13px;padding:2px 0}
+.pr .bar{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.pr .bar i{display:block;height:100%;border-radius:5px;background:var(--line)}
+.pr.sh .bar i{background:var(--ink-muted)}
+.pr.me .bar i{background:var(--maroon)}
+.pr.me{font-weight:700}
+.pr .v{text-align:right;font-variant-numeric:tabular-nums}
+.pr .nm small{color:var(--ink-muted);font-weight:400}
+.pos table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.pos th,.pos td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.pos th:first-child,.pos td:first-child{text-align:left}
+.pos th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted)}
+.pos .leg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink-muted);margin-top:8px}
+.pos .leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* ===== visual upgrade ===== */
+:root{--pitch:#1F5A34;--pitch-2:#2E7D4A;--shadow:0 1px 2px rgba(28,32,28,.06),0 8px 24px -12px rgba(28,32,28,.18)}
+.card{border-radius:16px;box-shadow:var(--shadow)}
+h2{display:flex;align-items:center;gap:10px}
+h2::before{content:"";width:5px;height:20px;border-radius:3px;background:linear-gradient(var(--maroon),var(--pitch-2))}
+.hero{position:relative;overflow:hidden;border-radius:18px;padding:16px 20px;color:#fff;
+  background:radial-gradient(120% 140% at 100% 0%,rgba(255,255,255,.14),transparent 55%),linear-gradient(135deg,#5E1520 0%,#7A1F2B 45%,#1F5A34 135%);box-shadow:var(--shadow)}
+.hero::after{content:"9";position:absolute;right:14px;top:-22px;font:600 120px/1 var(--font-display);color:rgba(255,255,255,.09);pointer-events:none}
+.hero h1{font-size:28px;color:#fff;position:relative}
+.hero .hs{color:rgba(255,255,255,.78);font-size:13px;position:relative}
+.hero .up{color:rgba(255,255,255,.65);font-size:12px;margin-top:2px;position:relative}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:18px;position:relative}
+.kpi{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:10px 12px;backdrop-filter:blur(4px)}
+.kpi small{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.kpi b{display:block;font:600 28px/1.15 var(--font-display);letter-spacing:.01em}
+.kpi b em{font:500 13px var(--font-body);font-style:normal;opacity:.75;margin-left:3px}
+.kpi svg{display:block;width:100%;height:30px;margin-top:4px}
+.kpi span{font-size:11px;color:rgba(255,255,255,.7)}
+.radarbox{display:block;margin-top:14px}
+
+.radarbox canvas{max-height:300px}
+.chips{display:flex;flex-direction:column;gap:8px}
+.chip{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-radius:12px;padding:8px 12px;font-size:13px}
+.chip b{font-size:15px}
+.chip .rk{margin-left:auto;font:600 20px var(--font-display);color:var(--maroon)}
+.chip .rk small{font:500 11px var(--font-body);color:var(--ink-muted)}
+.dp{margin-top:18px;display:flex;flex-direction:column;gap:20px}
+.dp .row{display:grid;grid-template-columns:minmax(92px,130px) minmax(0,1fr);gap:12px;align-items:center}
+.dp .rl{font-size:13px;font-weight:600;line-height:1.2}.dp .rl small{display:block;font-weight:400;color:var(--ink-muted);font-size:11px}
+.trk{position:relative;height:62px;margin:0 8px}
+.trk::before{content:"";position:absolute;left:0;right:0;top:26px;height:4px;border-radius:2px;background:var(--surface-2)}
+.trk .d{position:absolute;top:22px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--line);border:2px solid var(--surface)}
+.trk .d.sh{background:var(--ink-muted);width:14px;height:14px;margin-left:-7px;top:21px}
+.trk .d.me{background:var(--maroon);width:20px;height:20px;margin-left:-10px;top:18px;box-shadow:0 0 0 4px color-mix(in srgb,var(--maroon) 25%,transparent);z-index:3}
+.trk .av{position:absolute;top:14px;width:2px;height:28px;margin-left:-1px;background:var(--pitch-2);z-index:2;border-radius:1px}
+.trk .av i{position:absolute;top:30px;left:50%;transform:translateX(-50%);font:600 10px var(--font-body);font-style:normal;color:var(--pitch);white-space:nowrap}
+.trk .mv{position:absolute;top:2px;transform:translateX(-50%);font:600 12px var(--font-body);color:var(--maroon);white-space:nowrap;z-index:4}
+.trk .ax{position:absolute;top:46px;font-size:10px;color:var(--ink-muted)}
+.leg2{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink-muted);margin-top:14px}
+.leg2 i{display:inline-block;border-radius:50%;margin-right:5px;vertical-align:-2px}
+.pos details{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.pos summary{cursor:pointer;font-weight:600;font-size:14px}
+.pill,.light{border-radius:12px}
+
+.cv{position:relative;height:230px;margin-top:10px}
+#wkview{margin-top:12px;display:grid;gap:12px}.wkleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-muted);margin-top:8px}.wkleg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}#wkview table{width:100%;border-collapse:collapse;font-size:13px}#wkview th,#wkview td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--line)}#wkview th:first-child,#wkview td:first-child{text-align:left}#wkview th{color:var(--ink-muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.wkgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+.gch{grid-column:1/-1}
+.gch .cv{height:200px}
+.weeks{display:block}
+.card.game{background:linear-gradient(160deg,var(--surface),var(--surface-2))}
+.game .big{font-family:var(--font-display);color:var(--maroon)}
+
+/* ===== v3: Portugal Rugby performance-department look (navy report + pitch-green deck) ===== */
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F1F4F8; --line:#DDE3EA;
+  --ink:#0E1A2E; --ink-muted:#5B6678;
+  --maroon:#0F6B4A; --maroon-soft:#8FC7AE; --red:#D7263D; --gold:#D9981A; --navy:#0E1A2E;
+  --good:#168A45; --good-bg:#E3F4EA; --warn:#C2410C; --warn-bg:#FDEBDD; --bad:#C81E36; --bad-bg:#FBE3E6; --info:#1E4E8C; --info-bg:#E4ECF7;
+  --pitch:#0F6B4A; --pitch-2:#16A34A; --font-display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --shadow:0 1px 0 rgba(14,26,46,.04)}
+h1,h2,.num,.big,.kpi b,.rk,.verdict{font-family:var(--font-display)}
+h2{font-size:22px;font-weight:800;letter-spacing:.03em}
+h2::before{width:5px;height:auto;align-self:stretch;min-height:20px;border-radius:1px;background:var(--ink)}
+.card{border-radius:10px;box-shadow:none;border:1px solid var(--line);border-left:5px solid var(--maroon)}
+.card.game,.gch{border-left-color:var(--red)}
+.card.game{background:var(--surface)}
+.hero{border-radius:12px;background:var(--navy);padding:20px 22px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;box-shadow:none}
+.hero::after{display:none}
+.hero h1{font-size:46px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.hero .hs{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:rgba(255,255,255,.7)}
+.hero .up{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:rgba(255,255,255,.55)}
+.hero .hl{min-width:0}
+.pillg{display:inline-block;background:var(--gold);color:#0E1A2E;font:800 13px var(--font-display);letter-spacing:.08em;text-transform:uppercase;padding:7px 16px;border-radius:99px;position:relative}
+.hero{border-bottom:4px solid var(--red)}
+.verdict{font-size:30px;font-weight:800;letter-spacing:.01em;line-height:1.1;text-transform:uppercase}
+.tag{font-weight:700;letter-spacing:.1em;font-size:11px}
+.lights{gap:8px}
+.light{border-radius:8px;border-left:4px solid currentColor}
+.light b{font:800 20px var(--font-display);letter-spacing:.02em;text-transform:uppercase}
+.s-good{color:var(--good)} .s-warn{color:var(--warn)} .s-bad{color:var(--bad)} .s-info{color:var(--info)}
+.s-good small,.s-warn small,.s-bad small,.s-info small,.s-good span,.s-warn span,.s-bad span,.s-info span{color:var(--ink-muted)}
+.s-good b,.s-warn b,.s-bad b,.s-info b{color:inherit}
+.pill{border-radius:99px;font:800 11px var(--font-body);letter-spacing:.07em;text-transform:uppercase;padding:4px 10px;color:#fff}
+.pill.s-good,.pill.good{background:var(--good);color:#fff}.pill.s-warn,.pill.warn{background:var(--warn);color:#fff}.pill.s-bad,.pill.bad{background:var(--bad);color:#fff}.pill.s-info,.pill.info{background:var(--info);color:#fff}
+.num{font-weight:800;letter-spacing:.01em;font-size:26px}
+.game .big{font-weight:800;font-size:40px;color:var(--ink)}
+.dp .rl,.mh b{font-family:var(--font-display);font-size:16px;letter-spacing:.04em;text-transform:uppercase;font-weight:800}
+.legend i,.cl i{border-radius:2px}
+.legend i.ln{border-top-color:var(--gold)}
+.trk .av{background:var(--gold)}.trk .av i{color:var(--gold)}
+.chip{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--maroon);border-radius:8px;padding:12px 14px;flex-wrap:wrap}
+.chip.dn{border-left-color:var(--warn)}.chip.up{border-left-color:var(--good)}
+.chip .t{font:700 11px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted)}
+.chip .big2{font:800 38px/1 var(--font-display);letter-spacing:.01em;margin-top:2px}
+.chip .big2 small{font:500 12px var(--font-body);color:var(--ink-muted);margin-left:4px}
+.chip .lf{flex:1;min-width:150px}
+.chip .pb{height:8px;border-radius:4px;background:var(--surface-2);position:relative;margin-top:10px}
+.chip .pb i{display:block;height:100%;border-radius:4px;background:var(--good)}
+.chip .pb.warn i{background:var(--warn)} .chip .pb.info i{background:var(--info)}
+.chip .pb u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);text-decoration:none}
+.chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+.chip .rk{font-size:26px;text-align:right}
+.chip .pillr{display:inline-block;font:800 10px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:#fff;padding:3px 9px;border-radius:99px;margin-left:6px;vertical-align:4px}
+.pillr.good{background:var(--good)}.pillr.warn{background:var(--warn)}.pillr.info{background:var(--info)}
+.foot{margin-top:6px;padding-top:10px;border-top:1px solid var(--line);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.pos details,details.more summary{border-radius:8px}
+button[aria-pressed="true"]{background:var(--ink)!important;color:var(--bg)!important;border-color:var(--ink)!important}
+@media (max-width:520px){.hero h1{font-size:36px}}
+
+.jump{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;gap:8px;overflow-x:auto;padding:8px 0;margin:-14px 0 -14px;background:var(--bg);scrollbar-width:none}
+.jump::-webkit-scrollbar{display:none}
+.jump button{flex:1 0 auto;font:800 14px var(--font-display);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:10px 16px;min-height:42px;cursor:pointer}
+.jump button:active{background:var(--ink);color:var(--bg)}
+.more-btn{display:block;width:100%;margin:8px 0 4px;padding:12px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:700 13px var(--font-body);color:var(--ink)}
+tbody.short tr.x{display:none}
+.pick select{min-height:44px;font-size:16px}
+section[id]{scroll-margin-top:62px}
+.log{font-size:13px}.log th{padding:8px 6px;font-size:10px}.log td{padding:10px 6px}
+@media (max-width:520px){
+  .log th:nth-child(2),.log td:nth-child(2){display:none}
+  .log td.dj{font-weight:700}
+  .log th,.log td{padding-left:4px;padding-right:4px}
+  .log{font-size:12.5px}
+  body{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+  .wrap{gap:22px}
+  .card{padding:14px}
+  .hero{padding:16px}
+  .hero h1{font-size:38px}
+  .verdict{font-size:26px}
+  .lights{grid-template-columns:1fr}
+  .dp .row{grid-template-columns:1fr;gap:2px}
+  .dp .rl{display:flex;gap:8px;align-items:baseline}.dp .rl small{display:inline}
+  .chip{padding:12px}
+  .chip .rk{display:flex;gap:16px;width:100%;text-align:left;font-size:22px}.chip .rk br{display:none}
+  .games{grid-template-columns:1fr 1fr!important}
+  .gch{grid-column:1/-1}
+  .game .big{font-size:34px}
+  .cv{height:210px}
+  .gch .cv{height:190px}
+  .head{flex-direction:column;align-items:flex-start}
+}
+
+.pg{display:none;flex-direction:column;gap:22px}.pg.on{display:flex}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--surface);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));box-shadow:0 -6px 18px -10px rgba(14,26,46,.25)}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;color:var(--ink-muted);padding:8px 2px 6px;min-height:56px;font:700 11px var(--font-body);letter-spacing:.04em;text-transform:uppercase;position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tabbar svg{width:24px;height:24px}
+.tabbar button.on{color:var(--ink)}
+.tabbar button.on::before{content:"";position:absolute;top:-7px;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--red)}
+.tabbar button.on svg{color:var(--maroon)}
+@media(min-width:760px){.tabbar{left:50%;right:auto;transform:translateX(-50%);width:560px;border-radius:16px 16px 0 0;border:1px solid var(--line);border-bottom:0}}
+</style>
+
+<div class="wrap">
+  <div class="pg on" id="pg-hoje">
+  <header class="hero"><div class="hl"><div class="hs">Seleção de Portugal · Formação de jogo (9) · Controlo de carga</div><h1>Tomás Amado</h1><div class="up" id="updated"></div></div><span class="pillg" id="wkpill"></span></header>
+
+  <section id="s-sessao"><div class="pick"><label for="pick" class="sub">Ver sessão</label><select id="pick"></select></div><div id="latest"></div><div id="wktrend"></div></section>
+
+
+  </div>
+  <div class="pg" id="pg-semana">
+    <section id="s-wk"><h2>A tua semana</h2><div class="pick"><label for="wkpick" class="sub">Ver semana</label><select id="wkpick"></select></div><div id="wkview"></div></section>
+
+<section class="pos" id="s-semana"><h2>Semana: tu vs. a tua posição vs. os 3/4</h2><div class="sub">Comparação com os outros formações de jogo (9) e com os três-quartos, a partir dos relatórios semanais</div><div class="card" id="pos"></div></section>
+
+  
+  </div>
+  <div class="pg" id="pg-evol">
+<section id="s-evol">
+    <div class="head"><div><h2>Evolução</h2><div class="sub">As mesmas 4 métricas, sessão a sessão</div></div>
+      <div class="seg" role="group" aria-label="Período">
+        <button type="button" id="r12" aria-pressed="true">Últimas 12</button>
+        <button type="button" id="rAll" aria-pressed="false">Todas</button>
+      </div></div>
+    <div class="legend"><span><i style="background:var(--maroon-soft)"></i>Treino</span><span><i style="background:var(--red)"></i>Jogo</span><span><i class="ln"></i>Média dos Backs</span></div>
+    <div class="charts">
+      <div class="card chart-card"><h3>Distância</h3><p>Metros corridos na sessão.</p><div class="cwrap"><canvas id="cDist" role="img" aria-label="Distância por sessão"></canvas></div></div>
+      <div class="card chart-card"><h3>Corrida rápida</h3><p>Metros acima de 18 km/h.</p><div class="cwrap"><canvas id="cHsr" role="img" aria-label="Corrida rápida por sessão"></canvas></div></div>
+      <div class="card chart-card"><h3>Acelerações</h3><p>Arranques fortes na sessão.</p><div class="cwrap"><canvas id="cAcc" role="img" aria-label="Acelerações por sessão"></canvas></div></div>
+      <div class="card chart-card"><h3>Velocidade máxima</h3><p>km/h. Tracejado: máximo pessoal (~33,4). Linha verde: meta semanal de 95% (31,7).</p><div class="cwrap"><canvas id="cSpd" role="img" aria-label="Velocidade máxima por sessão"></canvas></div></div>
+    </div>
+  </section>
+
+  
+  </div>
+  <div class="pg" id="pg-jogos">
+<section id="s-jogos"><h2>Jogos</h2><div class="sub">Distância por minuto em campo: permite comparar jogos em que jogaste tempos diferentes</div><div class="games" id="games"></div></section>
+
+  
+  </div>
+  <div class="pg" id="pg-mais">
+<section><h2>Todas as sessões</h2><div class="sub">Toca numa linha para ver a nota.</div>
+    <div class="card" style="padding:6px 8px">
+      <div class="scroll"><table class="log"><thead><tr><th>Data</th><th>Tipo</th><th>Dist. (m)</th><th>Rápida (m)</th><th>Acel.</th><th>Vel. (km/h)</th></tr></thead><tbody id="logBody" class="short"></tbody></table></div>
+      <button type="button" class="more-btn" id="logMore">Ver todas as sessões</button>
+    </div></section>
+
+  <section class="gloss">
+    <div><b>Corrida rápida:</b> metros percorridos acima de 18 km/h.</div>
+    <div><b>Aceleração:</b> arranque acima de 2,5 m/s².</div>
+    <div><b>Média dos Backs:</b> média da tua linha (Backs) na mesma sessão.</div>
+    <div><b>Dia pesado:</b> mais de ~3500 m. Os jogos têm sempre recuperação completa e carb-up.</div>
+    <div><b>~</b> valor aproximado (lido de um gráfico do relatório).</div>
+  </section>
+  <footer class="foot"><span>Portugal Rugby · Performance Department</span><span>Controlo de carga · GPS</span></footer>
+
+  </div>
+</div>
+<nav class="tabbar" id="tabbar" aria-label="Navegação"><button type="button" data-p="hoje" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>Hoje</span></button><button type="button" data-p="semana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8 14h3M13 14h3M8 17h3"/></svg><span>Semana</span></button><button type="button" data-p="evol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/></svg><span>Evolução</span></button><button type="button" data-p="jogos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/><path d="M12 14v4M8 20h8"/></svg><span>Jogos</span></button><button type="button" data-p="mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Mais</span></button></nav>
+
+<script id="data-script">
+const SESSIONS = [
+  {date:"2026-08-25", week:35, type:"Training", notes:"", rd:1616, hsr:287, accel:31, rhie:13, maxSpeed:25.3, maxPct:0.76, avgRd:1804, avgHsr:471, avgAccel:30, avgMaxPct:0.80, avgRhie:13},
+  {date:"2026-08-26", week:35, type:"Training", notes:"", rd:2123, hsr:389, accel:28, rhie:10, maxSpeed:27.9, maxPct:0.84, avgRd:1971, avgHsr:300, avgAccel:19, avgMaxPct:0.83, avgRhie:11},
+  {date:"2026-08-28", week:35, type:"Training", notes:"", rd:3996, hsr:583, accel:52, rhie:19, maxSpeed:26.0, maxPct:0.78, avgRd:3598, avgHsr:451, avgAccel:45, avgMaxPct:0.80, avgRhie:14},
+  {date:"2026-08-31", week:36, type:"Training", notes:"", rd:2535, hsr:372, accel:47, rhie:13, maxSpeed:27.7, maxPct:0.83, avgRd:2399, avgHsr:268, avgAccel:44, avgMaxPct:0.81, avgRhie:11},
+  {date:"2026-09-01", week:36, type:"Training", notes:"Split Training + Hill Sprint", rd:1487, hsr:191, accel:7, rhie:5, maxSpeed:22.3, maxPct:0.67, avgRd:1360, avgHsr:223, avgAccel:19, avgMaxPct:0.69, avgRhie:10},
+  {date:"2026-09-02", week:36, type:"Training", notes:"Speed + Conditioning", rd:2216, hsr:365, accel:13, rhie:15, maxSpeed:32.2, maxPct:0.96, avgRd:1941, avgHsr:403, avgAccel:17, avgMaxPct:0.95, avgRhie:13},
+  {date:"2026-09-04", week:36, type:"Training", notes:"", rd:3562, hsr:1263, accel:48, rhie:20, maxSpeed:26.5, maxPct:0.79, avgRd:3276, avgHsr:963, avgAccel:39, avgMaxPct:0.81, avgRhie:13},
+  {date:"2026-09-07", week:37, type:"Training", notes:"", rd:3823, hsr:1804, accel:75, rhie:33, maxSpeed:26.1, maxPct:0.78, avgRd:3557, avgHsr:1411, avgAccel:64, avgMaxPct:0.81, avgRhie:27},
+  {date:"2026-09-09", week:37, type:"Training", notes:"Managed training", rd:3074, hsr:1047, accel:62, rhie:25, maxSpeed:27.1, maxPct:0.81, avgRd:3349, avgHsr:888, avgAccel:64, avgMaxPct:0.81, avgRhie:26},
+  {date:"2026-09-11", week:37, type:"Training", notes:"Managed training", rd:2854, hsr:674, accel:48, rhie:26, maxSpeed:31.0, maxPct:0.93, avgRd:2502, avgHsr:475, avgAccel:48, avgMaxPct:0.88, avgRhie:20},
+  {date:"2026-09-12", week:37, type:"Training", notes:"Light “chiller” day", rd:934, hsr:39, accel:22, rhie:13, maxSpeed:21.4, maxPct:0.64, avgRd:946, avgHsr:38, avgAccel:20, avgMaxPct:0.63, avgRhie:7},
+  {date:"2026-09-14", week:38, type:"Training", notes:"New report format begins (no RHIE/PL from here)", rd:2100, hsr:526, accel:54, rhie:null, maxSpeed:29.0, maxPct:0.87, avgRd:2040, avgHsr:401, avgAccel:54, avgMaxPct:0.83, avgRhie:null},
+  {date:"2026-09-15", week:38, type:"Training", notes:"vs U20 — heavy day flagged, carb-up given", rd:3436, hsr:1392, accel:53, rhie:null, maxSpeed:30.2, maxPct:0.91, avgRd:3016, avgHsr:901, avgAccel:51, avgMaxPct:0.90, avgRhie:null},
+  {date:"2026-09-18", week:38, type:"Training", notes:"Strong volume, unusually low top speed", rd:3394, hsr:835, accel:60, rhie:null, maxSpeed:24.0, maxPct:0.72, avgRd:2940, avgHsr:556, avgAccel:50, avgMaxPct:0.79, avgRhie:null},
+  {date:"2026-09-23", week:39, type:"Training", notes:"Team Run — easing in post-travel to Georgia", rd:1065, hsr:268, accel:17, rhie:null, maxSpeed:29.7, maxPct:0.89, avgRd:1400, avgHsr:300, avgAccel:19, avgMaxPct:0.88, avgRhie:null},
+  {date:"2026-09-24", week:39, type:"Match", notes:"vs Cheetahs — 38:34 played, split with Pedro Lucas", rd:1900, hsr:497, accel:18, rhie:null, maxSpeed:27.3, maxPct:0.82, avgRd:2701, avgHsr:486, avgAccel:30, avgMaxPct:0.91, avgRhie:null, fieldTimeMin: 38 + 34/60, opponent:"Cheetahs"},
+  {date:"2026-09-26", week:39, type:"Training", notes:"2 days post-match, recovery-focused", rd:1754, hsr:259, accel:46, rhie:null, maxSpeed:23.5, maxPct:0.70, avgRd:1721, avgHsr:276, avgAccel:32, avgMaxPct:0.79, avgRhie:null},
+  {date:"2026-09-28", week:40, type:"Training", notes:"Team Run", rd:1400, hsr:405, accel:21, rhie:null, maxSpeed:31.0, maxPct:0.93, avgRd:1572, avgHsr:403, avgAccel:24, avgMaxPct:0.87, avgRhie:null},
+  {date:"2026-09-29", week:40, type:"Match", notes:"vs Griquas — 66:12 played, team-high HSR (1025m)", rd:3400, hsr:1025, accel:46, rhie:null, maxSpeed:29.7, maxPct:0.89, avgRd:2902, avgHsr:642, avgAccel:35, avgMaxPct:0.87, avgRhie:null, fieldTimeMin: 66 + 12/60, opponent:"Griquas"},
+  {date:"2026-10-03", week:40, type:"Training", notes:"Team Run — team-high HSR (477m, #1 in squad)", rd:1877, hsr:477, accel:32, rhie:null, maxSpeed:29.2, maxPct:0.87, avgRd:1657, avgHsr:352, avgAccel:25, avgMaxPct:0.82, avgRhie:null},
+  {date:"2026-10-04", week:40, type:"Match", notes:"Full 90min played for the first time, team-high HSR, 2nd-best accel of season", rd:4000, hsr:1099, accel:71, rhie:null, maxSpeed:30.1, maxPct:0.90, avgRd:3637, avgHsr:681, avgAccel:47, avgMaxPct:0.90, avgRhie:null, fieldTimeMin: 90, opponent:"Pumas"},
+  {date:"2026-10-08", week:41, type:"Training", notes:"S&C-prescribed sprint/strength day (not a field session) — short ~27min, team-high HSR share (67% of distance), low top speed expected given short rep lengths", rd:1750, hsr:1176, accel:46, rhie:null, maxSpeed:25.8, maxPct:0.77, avgRd:1751, avgHsr:1104, avgAccel:46, avgMaxPct:0.78, avgRhie:null},
+  {date:"2026-10-09", week:41, type:"Training", notes:"Conditioning (28:07) — #1 in Backs for distance (2,767m) and HSR (1,416m); accel tied top of squad", rd:2767, hsr:1416, accel:13, rhie:null, maxSpeed:25.4, maxPct:0.76, avgRd:2599, avgHsr:1235, avgAccel:12, avgMaxPct:0.76, avgRhie:null},
+  {date:"2026-10-12", week:42, type:"Training", notes:"Rugby Training (1:30:39) — #2 in Backs for distance (2,394m) and top speed (30.4 km/h); HSR and accels above squad avg", rd:2394, hsr:391, accel:37, rhie:null, maxSpeed:30.4, maxPct:0.91, avgRd:1987, avgHsr:300, avgAccel:33, avgMaxPct:0.83, avgRhie:null},
+  {date:"2026-10-13", week:42, type:"Training", notes:"Rugby Training (1:31:15) — back-to-back day; slightly below squad avg, accel 24 vs 39 (distance approx from chart)", rd:2600, hsr:294, accel:24, rhie:null, maxSpeed:25.8, maxPct:0.77, avgRd:2753, avgHsr:335, avgAccel:39, avgMaxPct:0.80, avgRhie:null},
+  {date:"2026-10-14", week:42, type:"Training", notes:"Rugby Training (1:21:22) — #3 in Backs for distance (3,214m), #1 for HSR (898m), new season-best top speed 32.6 km/h (97.7%)", rd:3214, hsr:898, accel:38, rhie:null, maxSpeed:32.6, maxPct:0.977, avgRd:2797, avgHsr:594, avgAccel:36, avgMaxPct:0.88, avgRhie:null},
+  {date:"2026-10-17", week:42, type:"Match", notes:"vs Bohemians — 68:23 played, HSR 945m (#2 in Backs), best work-rate of his three matches (distance approx from chart)", rd:4000, hsr:945, accel:31, rhie:null, maxSpeed:28.0, maxPct:0.838, avgRd:3311, avgHsr:673, avgAccel:32, avgMaxPct:0.90, avgRhie:null, fieldTimeMin: 68 + 23/60, opponent:"Bohemians"},
+  {date:"2026-10-20", week:43, type:"Training", notes:"Rugby Training (1:27:44) — low volume (distance approx from chart) but #1 in Backs for accelerations (47) and top speed (28.8 km/h)", rd:1400, hsr:234, accel:47, rhie:null, maxSpeed:28.8, maxPct:0.863, avgRd:1823, avgHsr:272, avgAccel:39, avgMaxPct:0.83, avgRhie:null},
+  {date:"2026-10-21", week:43, type:"Training", notes:"Rugby Training (1:30:01) — heavy day: #2 in Backs for distance (3,534m), #1 for HSR (790m) and #1 for accelerations (62)", rd:3534, hsr:790, accel:62, rhie:null, maxSpeed:26.1, maxPct:0.782, avgRd:3167, avgHsr:510, avgAccel:41, avgMaxPct:0.80, avgRhie:null},
+  {date:"2026-10-22", week:43, type:"Training", notes:"Rugby Training (1:18:47) — near squad average on volume (distance approx from chart) but #2 in Backs for top speed (28.9 km/h)", rd:2600, hsr:455, accel:35, rhie:null, maxSpeed:28.9, maxPct:0.865, avgRd:2577, avgHsr:474, avgAccel:34, avgMaxPct:0.81, avgRhie:null},
+  {date:"2026-10-24", week:43, type:"Match", notes:"vs Wolves — 30:50 played, highest HSR rate of his matches (~17 m/min); distance approx from chart", rd:1800, hsr:524, accel:28, rhie:null, maxSpeed:26.5, maxPct:0.795, avgRd:3253, avgHsr:655, avgAccel:39, avgMaxPct:0.87, avgRhie:null, fieldTimeMin: 30 + 50/60, opponent:"Wolves"},
+  {date:"2026-10-29", week:44, type:"Training", notes:"Rugby Skills — shortened: left early for an exam, so low distance is expected. Still #2 in Backs for HSR (90m) and top speed (27.8 km/h, 83.3%); accel 16 vs 15. Only GPS session of Week 44 (training with Agronomia, no GPS).", rd:668, hsr:90, accel:16, rhie:null, maxSpeed:27.8, maxPct:0.833, avgRd:786, avgHsr:65, avgAccel:15, avgMaxPct:0.72, avgRhie:null, gpsGap:true, shortSession:true},
+  {date:"2026-11-02", week:45, type:"Training", notes:"Clarity — very short, light session (Backs total field time 42:01). HSR 48m vs squad 31 (#3 in Backs), top speed 22.9 km/h (68.6% vs squad 62%). First GPS since 29/10 (Agronomia week, no GPS).", rd:505, hsr:48, accel:1, rhie:null, maxSpeed:22.9, maxPct:0.686, avgRd:546, avgHsr:31, avgAccel:3, avgMaxPct:0.62, avgRhie:null},
+  {date:"2026-11-03", week:45, type:"Training", notes:"Full day Rugby Training — ONE DAY WITH TWO SESSIONS combined, so not comparable to single sessions. Heavy day: ~4,200m (distance approx from chart, squad avg 4,190), HSR 956m (#3 in Backs), 95 accelerations (#3 in Backs), top speed 31.2 km/h (93.5%, #2 in Backs).", combined:true, rd:4200, hsr:956, accel:95, rhie:null, maxSpeed:31.2, maxPct:0.935, avgRd:4190, avgHsr:817, avgAccel:82, avgMaxPct:0.884, avgRhie:null},
+  {date:"2026-11-04", week:45, type:"Training", notes:"Rugby Training — day after the heavy 2-session day. Distance approx ~2,100m from chart (squad avg 2,245), HSR 378m vs 414, accel 35 vs 34, top speed 28.9 km/h (86.6% vs squad 80%, #2 in Backs).", rd:2100, hsr:378, accel:35, rhie:null, maxSpeed:28.9, maxPct:0.866, avgRd:2245, avgHsr:414, avgAccel:34, avgMaxPct:0.80, avgRhie:null},
+  {date:"2026-11-06", week:45, type:"Training", groupLabel:"Non 23", combined:true, notes:"Dia com 2 sessões somadas (Non 23 Session + Team Run). Non 23 Session — short, light session (group total field time 45:37). Averages are the Non 23 group (forwards + backs), not the Backs. Distance 1,096m (exact, #1 of 13; group avg 963), HSR 459m (#4), accel 14 (avg 16), top speed 24.3 km/h (72.9% vs 77%).", extra:"Mais tarde, no mesmo dia, houve um Team Run (aquecimento/corrida leve, 47:53 em campo): 247 m (#2 de 7 no grupo; média 210 m), 21 m acima de 18 km/h (#1; média 4), 4 acelerações (#2; média 3), velocidade máxima 21,9 km/h (65,7%, #1; média 55%). Os números em cima são a soma das duas sessões (médias do grupo também somadas). Dia leve.", rd:1343, hsr:480, accel:18, rhie:null, maxSpeed:24.3, maxPct:0.729, avgRd:1173, avgHsr:394, avgAccel:19, avgMaxPct:0.77, avgRhie:null},
+  {date:"2026-11-07", week:45, type:"Training", groupLabel:"Non 23", notes:"Non 23 report on the Chile match day (Tomás was not in the match 23). Short session, group field time 37:39, 7 players. Averages are the Non 23 group (forwards + backs), not the Backs. Distance 1,328m (#3 of 7; group avg 1,258), HSR 386m (#1; avg 229), accel 49 (#2; avg 39), top speed 29.7 km/h (88.9% vs 83%).", rd:1328, hsr:386, accel:49, rhie:null, maxSpeed:29.7, maxPct:0.889, avgRd:1258, avgHsr:229, avgAccel:39, avgMaxPct:0.83, avgRhie:null},
+  {date:"2026-11-10", week:46, type:"Training", notes:"Rugby Training (Backs, 14 players, group field time 1:26:58). Distance 3,418m (exact, #2 of 14; squad avg 2,964), HSR 760m (#3; avg 605), accel 45 (avg 41), 1 sprint, top speed 30.5 km/h (91.4% vs squad 87%, #3). Just under the 3,500m heavy threshold.", rd:3418, hsr:760, accel:45, rhie:null, maxSpeed:30.5, maxPct:0.914, avgRd:2964, avgHsr:605, avgAccel:41, avgMaxPct:0.87, avgRhie:null},
+];
+
+// ---------- helpers ----------
+const MAXREF = 33.4; // personal top speed reference (km/h)
+const nf = new Intl.NumberFormat('pt-PT');
+const f0 = v => nf.format(Math.round(v));
+const f1 = v => new Intl.NumberFormat('pt-PT',{minimumFractionDigits:1,maximumFractionDigits:1}).format(v);
+const dshort = d => new Date(d+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short'}).replace('.','');
+const dlong = d => new Date(d+'T00:00:00').toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long'});
+const approx = s => /approx/i.test(s.notes||'');
+const avgSpeed = s => s.avgMaxPct * (s.maxSpeed / s.maxPct);
+const DAY = 86400000;
+const last = SESSIONS[SESSIONS.length-1];
+const HEAVY = 3500;
+
+function meanRd(days, ref){
+  const end = new Date(ref.date+'T00:00:00').getTime();
+  const xs = SESSIONS.filter(s=>{const t=new Date(s.date+'T00:00:00').getTime();return end-t < days*DAY && t<=end});
+  return xs.length ? xs.reduce((a,s)=>a+s.rd,0)/xs.length : null;
+}
+
+function status(v, avg){
+  const r = v/avg;
+  if (r >= 1.10) return {k:'good', icon:'▲', txt:'Acima'};
+  if (r <= 0.90) return {k:'warn', icon:'▼', txt:'Abaixo'};
+  return {k:'info', icon:'●', txt:'Na média'};
+}
+
+// ---------- latest session ----------
+function cmpBars(a,b,c){
+  const m = Math.max(a,b||0,c||0);
+  const bar = (v,col,n)=>v==null?'':'<i title="'+n+'" style="width:'+Math.max(2,v/m*100).toFixed(1)+'%;background:'+col+'"></i>';
+  return '<div class="cmp" aria-hidden="true">'+bar(a,'var(--maroon)','Tu')+bar(b,'var(--maroon-soft)','Tua média')+bar(c,'var(--ink-muted)','Média Backs')+'</div>';
+}
+function perMinute(s){
+  if (s.type!=='Match' || !s.fieldTimeMin) return '';
+  const pm = SESSIONS.slice(0,SESSIONS.indexOf(s)).filter(x=>x.type==='Match' && x.fieldTimeMin);
+  const d = s.rd/s.fieldTimeMin, h = s.hsr/s.fieldTimeMin;
+  const dm = pm.length ? pm.reduce((a,x)=>a+x.rd/x.fieldTimeMin,0)/pm.length : null;
+  const hm = pm.length ? pm.reduce((a,x)=>a+x.hsr/x.fieldTimeMin,0)/pm.length : null;
+  const blk = (n,v,a,u)=>'<div><small>'+n+'</small><span class="num">'+(approx(s)&&n==='Distância'?'~':'')+v+' <small class="sub" style="display:inline">'+u+'</small></span>'+(a!=null?'<small>Média dos teus jogos anteriores: '+(n==='Distância'?f0(a):f1(a))+' '+delta(parseFloat(String(v).replace(',','.')),a).replace('<small class="d','<small style="display:inline" class="d')+'</small>':'')+'</div>';
+  return '<div class="pm" style="margin-top:16px">'+blk('Distância',f0(d),dm,'m/min')+blk('Corrida rápida',f1(h),hm,'m/min')+'</div>'
+    + '<div class="sub" style="margin-top:6px">Comparação justa do jogo: por minuto em campo ('+Math.floor(s.fieldTimeMin)+' min). Os Backs jogam tempos diferentes, por isso aqui comparas só contigo.</div>';
+}
+function speedGoal(s){
+  const goal = MAXREF*0.95, wk = SESSIONS.filter(x=>x.week===s.week);
+  const best = wk.reduce((a,x)=>x.maxSpeed>a.maxSpeed?x:a, wk[0]);
+  const done = best.maxSpeed >= goal;
+  const pct = Math.min(100, best.maxSpeed/MAXREF/1*100);
+  return '<div class="goal"><b>Meta de velocidade da semana</b>'
+    + '<div><span class="num">'+f1(best.maxSpeed)+' km/h</span> <span class="sub">('+Math.round(best.maxSpeed/MAXREF*100)+'% do teu máximo)</span> · <span class="'+(done?'t-good':'t-warn')+'" style="font-weight:600">'+(done?'✓ Meta cumprida':'Ainda não cumprida')+'</span></div>'
+    + '<div class="gbar"><i style="width:'+pct.toFixed(1)+'%"></i><u style="left:'+(goal/MAXREF*100).toFixed(1)+'%"></u></div>'
+    + '<div class="sub">Meta: chegar a 95% do máximo ('+f1(goal)+' km/h) pelo menos uma vez por semana. A marca verde é a meta.'+(done?'':' Faltam '+f1(goal-best.maxSpeed)+' km/h.')+'</div></div>';
+}
+function prevSame(s, n){
+  const i = SESSIONS.indexOf(s);
+  return SESSIONS.slice(0,i).filter(x=>x.type===s.type && !x.combined).slice(-n);
+}
+const mean = (xs,k) => xs.length ? xs.reduce((a,x)=>a+x[k],0)/xs.length : null;
+function delta(v, a){
+  if (a==null) return '';
+  const p = (v/a-1)*100, c = p>=5?'good':p<=-5?'warn':'info';
+  return '<small class="d t-'+c+'">'+(p>=0?'+':'')+Math.round(p)+'%</small>';
+}
+function renderLatest(s){
+  const ap = approx(s) ? '~' : '';
+  const prev = prevSame(s,5);
+  const match = s.type === 'Match';
+  const rows = [
+    {n:'Distância', k:'rd', d:'Metros corridos', v:s.rd, a:s.avgRd, f:f0, u:' m', ap:ap},
+    {n:'Corrida rápida', k:'hsr', d:'Metros acima de 18 km/h', v:s.hsr, a:s.avgHsr, f:f0, u:' m', ap:''},
+    {n:'Acelerações', k:'accel', d:'Arranques fortes', v:s.accel, a:s.avgAccel, f:f0, u:'', ap:''},
+    {n:'Velocidade máxima', k:'maxSpeed', d:'Ponta mais alta', v:s.maxSpeed, a:avgSpeed(s), f:f1, u:' km/h', ap:'', aap:'~'}
+  ].map(r=>({...r, st:status(r.v,r.a)}));
+  const above = rows.filter(r=>r.st.k==='good').length, below = rows.filter(r=>r.st.k==='warn').length;
+  let verdict;
+  if (above>=3) verdict = 'Muito bom: acima da média dos Backs em '+above+' de 4 métricas.';
+  else if (above>=2 && below===0) verdict = 'Boa sessão: acima da média dos Backs em '+above+' de 4 métricas.';
+  else if (below>=3) verdict = 'Sessão leve: abaixo da média dos Backs em '+below+' de 4 métricas.';
+  else verdict = 'Sessão normal: perto da média dos Backs.';
+  if (s.shortSession) {
+    const g = rows.filter(r=>r.st.k==='good').map(r=>r.n.toLowerCase());
+    verdict = 'Sessão encurtada (saíste mais cedo), por isso a distância ficou baixa.' + (g.length ? ' Ficaste acima da média dos Backs em '+g.join(' e ')+'.' : '');
+  }
+  if (match && s.fieldTimeMin) {
+    if (s.fieldTimeMin < 60 && below>=2) verdict = 'Jogaste só '+Math.floor(s.fieldTimeMin)+' min, por isso os totais ficam abaixo da média dos Backs.';
+    else verdict += ' Jogaste '+Math.floor(s.fieldTimeMin)+' min.';
+  }
+
+  const heavy = s.rd > HEAVY;
+  const load = heavy ? {k:'bad', b:'Dia pesado', t:'Mais de ~3500 m'} : s.rd > 3000 ? {k:'warn', b:'Carga alta', t:'Entre 3000 e 3500 m'} : {k:'good', b:'Carga normal', t:'Abaixo de 3000 m'};
+  const ac = meanRd(7,s), ch = meanRd(28,s), ratio = ac/ch;
+  let wk = ratio > 1.3 ? {k:'warn', b:'Mais pesada', t:'Semana acima do teu habitual'} : ratio < 0.8 ? {k:'info', b:'Mais leve', t:'Semana abaixo do teu habitual'} : {k:'good', b:'Habitual', t:'Semana dentro do teu normal'};
+  if (SESSIONS.filter(x=>x.week===s.week && x.date<=s.date).length===1) wk = {k:'info', b:'Semana a começar', t:'Ainda só 1 sessão com GPS esta semana'};
+  const gapNear = SESSIONS.some(x=>x.gpsGap && (new Date(s.date)-new Date(x.date))/DAY>=0 && (new Date(s.date)-new Date(x.date))/DAY<=7);
+  if (gapNear) wk = {k:'info', b:'Dados incompletos', t:'Treinos da semana sem GPS (Agronomia)'};
+  const rec = (match || heavy) ? {k:'warn', b:'Recuperação completa', t:match ? 'Dia de jogo' : 'Dia pesado'} : {k:'good', b:'Recuperação normal', t:'Sem protocolo extra'};
+  const todo = (match || heavy)
+    ? 'Protocolo de recuperação completo e carb-up de 7–8 g/kg (560–640 g de hidratos de carbono no teu peso).'
+    : 'Recuperação normal e refeições habituais. Sem carb-up extra.';
+
+  const L = (name, o) => '<div class="light s-'+o.k+'"><small>'+name+'</small><b class="t-'+o.k+'">'+o.b+'</b><span>'+o.t+'</span></div>';
+  const M = r => '<div class="mrow"><div class="mname">'+r.n+'<small>'+r.d+'</small></div>'
+    + '<div class="num">'+r.ap+r.f(r.v)+'<small class="sub">'+r.u+'</small></div>'
+    + '<div class="num avg">'+(prev.length?r.f(mean(prev,r.k)):'-')+delta(r.v,mean(prev,r.k))+'</div>'
+    + '<div class="num avg">'+(r.aap||'')+r.f(r.a)+'</div>'
+    + '<div class="pillcell"><span class="pill s-'+r.st.k+' t-'+r.st.k+'">'+r.st.icon+' '+r.st.txt+'</span></div>'
+    + cmpBars(r.v, prev.length?mean(prev,r.k):null, r.a)+'</div>';
+
+  let LH =
+    '<div class="card"><span class="tag">'+(s===last?'Última sessão':'Sessão')+' · '+dlong(s.date)+' · '+(match?'Jogo vs '+s.opponent:'Treino')+'</span>'
+    + '<p class="verdict">'+verdict+'</p>'
+    + '<div class="lights">'+L('Carga da sessão',load)+L('Esta semana vs. último mês',wk)+L('Recuperação',rec)+'</div>'
+    + '<div class="todo"><b>O que fazer</b>'+todo+'</div>'
+    + (s.extra ? '<div class="sub" style="margin-top:10px"><b>Também nesse dia:</b> '+s.extra+'</div>' : '')
+    + (s.combined ? '<div class="sub" style="margin-top:10px"><b>Dia com 2 sessões juntas.</b> Os números são do dia todo, por isso compara só com a média dos Backs e não com as tuas sessões individuais.</div>' : '')
+    + '<details class="more"><summary>Ver detalhe: números, comparações e meta</summary>'
+    + '<div class="cl"><span><i style="background:var(--maroon)"></i>Tu</span><span><i style="background:var(--maroon-soft)"></i>Tua média</span><span><i style="background:var(--ink-muted)"></i>Média dos Backs</span></div>'
+    + '<div class="metrics"><div class="mrow mh"><div class="mh-n">Métrica</div><div>Tu</div><div>Tua média*</div><div>Média Backs</div><div class="pillcell"></div></div>'+rows.map(M).join('')+'</div><div class="sub" style="margin-top:6px">* '+(match?'Média dos teus '+prev.length+' jogos anteriores.':'Média das tuas '+prev.length+' sessões de treino anteriores.')+' A percentagem mostra se estás acima ou abaixo de ti.</div>'
+    + perMinute(s) + speedGoal(s) + '</details></div>';
+  if (s.groupLabel) LH = LH.replace(/Backs/g, s.groupLabel);
+  document.getElementById('latest').innerHTML = LH;
+  document.getElementById('updated').textContent = 'Atualizado a '+dshort(last.date)+' · '+SESSIONS.length+' sessões';
+  renderTrend(s);
+}
+
+// ---------- charts ----------
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let range = 12, charts = [];
+function build(){
+  charts.forEach(c=>c.destroy()); charts = [];
+  const src = range===0 ? SESSIONS : SESSIONS.slice(-range);
+  const labels = src.map(s=>dshort(s.date));
+  const ink = css('--ink-muted'), grid = css('--line');
+  const pr=css('--maroon'), mc=css('--red'), ms=css('--maroon-soft'), gold=css('--gold'), pit=css('--pitch-2'), surf=css('--surface'), inkc=css('--ink'), bgc=css('--bg');
+  Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+  const grad = (c1,c2) => ctx => { const a=ctx.chart.chartArea; if(!a) return c1; const g=ctx.chart.ctx.createLinearGradient(0,a.top,0,a.bottom); g.addColorStop(0,c1); g.addColorStop(1,c2); return g; };
+  const barFill = ctx => { const m = src[ctx.dataIndex] && src[ctx.dataIndex].type==='Match'; return m ? grad(mc, mc+'AA')(ctx) : grad(ms, ms+'AA')(ctx); };
+  const peak = {id:'peak', afterDatasetsDraw(ch){ const d=ch.data.datasets[0], m=ch.getDatasetMeta(0); if(!m.data.length) return;
+      const vals=d.data.map(v=>v==null?-1:v), mi=vals.indexOf(Math.max(...vals)), li=vals.length-1, c=ch.ctx; c.save(); c.font='600 11px Inter, sans-serif'; c.textAlign='center';
+      [mi,li].filter((v,i,a)=>a.indexOf(v)===i).forEach(i=>{ const el=m.data[i]; if(!el||d.data[i]==null) return; const t=nf.format(Math.round(d.data[i]*10)/10);
+        c.fillStyle=i===mi?pr:ink; c.fillText(t, el.x, el.y-6); }); c.restore(); }};
+  const tip = {backgroundColor:inkc, titleColor:bgc, bodyColor:bgc, cornerRadius:10, padding:10, boxPadding:4, titleFont:{weight:'600'}, usePointStyle:true};
+  const opts = (unit, min) => ({responsive:true, maintainAspectRatio:false, animation:{duration:500}, layout:{padding:{top:16}},
+    interaction:{mode:'index', intersect:false},
+    plugins:{legend:{display:false}, tooltip:Object.assign({}, tip, {callbacks:{
+      title:i=>{const s=src[i[0].dataIndex]; return dshort(s.date)+' · '+(s.type==='Match'?'Jogo vs '+s.opponent:'Treino');},
+      label:c=>c.dataset.label+': '+(c.parsed.y==null?'-':nf.format(Math.round(c.parsed.y*10)/10))+unit}})},
+    scales:{x:{ticks:{color:ink,maxRotation:(innerWidth<520?0:60),autoSkip:true,maxTicksLimit:(innerWidth<520?6:(range===0?14:12)),font:{size:11}},grid:{display:false},border:{color:grid}},
+            y:{beginAtZero:min===undefined, min:min, ticks:{color:ink,font:{size:11},maxTicksLimit:6}, grid:{color:grid+'99',drawTicks:false}, border:{display:false}}}});
+  const mk = (id, label, key, avgKey, unit, avgFn) => {
+    const ds = [{type:'bar', label:label, data:src.map(s=>s[key]), backgroundColor:barFill, borderRadius:{topLeft:8,topRight:8}, borderSkipped:'bottom', maxBarThickness:26, order:2}];
+    if (avgKey) ds.push({type:'line', label:'Média Backs', data:src.map(s=>avgFn?avgFn(s):s[avgKey]), borderColor:gold, backgroundColor:surf, borderWidth:2.5, pointRadius:3.5, pointBorderWidth:2, pointBorderColor:gold, pointHoverRadius:6, cubicInterpolationMode:'monotone', order:1});
+    charts.push(new Chart(document.getElementById(id), {data:{labels, datasets:ds}, options:opts(unit), plugins:[peak]}));
+  };
+  mk('cDist','Tu','rd','avgRd',' m');
+  mk('cHsr','Tu','hsr','avgHsr',' m');
+  mk('cAcc','Tu','accel','avgAccel','');
+  // speed: bars green once they reach the weekly 95% goal
+  const goal = MAXREF*0.95, spFill = ctx => { const v=src[ctx.dataIndex].maxSpeed; return v>=goal ? grad(pit,pit+'99')(ctx) : barFill(ctx); };
+  const sd = [{type:'bar', label:'Tu', data:src.map(s=>s.maxSpeed), backgroundColor:spFill, borderRadius:{topLeft:8,topRight:8}, borderSkipped:'bottom', maxBarThickness:26, order:2},
+              {type:'line', label:'Máximo pessoal', data:src.map(()=>MAXREF), borderColor:ink, borderDash:[3,5], borderWidth:1.5, pointRadius:0, pointHoverRadius:0, order:1},
+              {type:'line', label:'Meta 95%', data:src.map(()=>goal), borderColor:pit, borderWidth:2.5, pointRadius:0, pointHoverRadius:0, order:1}];
+  const so = opts(' km/h'); so.scales.y.max = 36;
+  charts.push(new Chart(document.getElementById('cSpd'), {data:{labels, datasets:sd}, options:so, plugins:[peak]}));
+  drawWeekChart(); buildGames({mc,ms,pit,ink,grid,tip,pr});
+}
+function setRange(n){
+  range = n;
+  document.getElementById('r12').setAttribute('aria-pressed', n===12);
+  document.getElementById('rAll').setAttribute('aria-pressed', n===0);
+  build();
+}
+document.getElementById('r12').onclick = ()=>setRange(12);
+document.getElementById('rAll').onclick = ()=>setRange(0);
+
+// ---------- weeks ----------
+const DOWN = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+function dow(d){ const n = new Date(d).getUTCDay(); return n===0 ? 7 : n; }   // seg=1 ... dom=7
+// Cada semana conta só até ao mesmo dia da semana (cut), para comparar o mesmo pedaço de semana.
+function weekData(cut){
+  cut = cut || dow(last.date);
+  const w = {};
+  SESSIONS.forEach(s=>{(w[s.week] ||= {k:s.week,n:0, rd:0, hsr:0, d0:s.date, d1:s.date, gap:false, sp:null}); const o=w[s.week]; if(s.gpsGap) o.gap=true; if(dow(s.date)>cut) return; o.n++; o.rd+=s.rd; o.hsr+=s.hsr; o.d1=s.date; o.sp=Math.max(o.sp||0,s.maxSpeed);});
+  return Object.values(w).sort((a,b)=>a.k-b.k).slice(-10);
+}
+function renderWeeks(){}
+function buildWeeks(opts,P){
+  const ws = weekData(), lab = ws.map(o=>dshort(o.d0)), cur = last.week;
+  const goal = MAXREF*0.95;
+  const base = (unit)=>{const o=opts(unit); o.layout={padding:{top:18}}; o.plugins.tooltip=Object.assign({},P.tip,{callbacks:{title:i=>{const o=ws[i[0].dataIndex];return 'Semana '+o.k+(o.n?' · '+dshort(o.d0)+' – '+dshort(o.d1):' · sem sessões até '+DOWN[dow(last.date)])},label:c=>c.dataset.label+': '+nf.format(Math.round(c.parsed.y*10)/10)+unit,afterBody:i=>{const o=ws[i[0].dataIndex];return o.n+(o.n===1?' sessão':' sessões')+(o.gap?' · treinos sem GPS':'')+(o.k===cur?' · semana em curso':'')}}}); o.scales.x.ticks.maxRotation=0; return o;};
+  const lbl = {id:'lbl',afterDatasetsDraw(ch){const m=ch.getDatasetMeta(0),c=ch.ctx;c.save();c.font='600 11px Inter, sans-serif';c.textAlign='center';c.fillStyle=P.ink;m.data.forEach((e,i)=>{const v=ch.data.datasets[0].data[i];if(v!=null)c.fillText(nf.format(Math.round(v*10)/10),e.x,e.y-6)});c.restore()}};
+  const part = i => ws[i].gap || ws[i].k===cur;
+  const o1 = base(' km'); o1.scales.y.ticks.display=false; o1.scales.y.grid.display=false;
+  charts.push(new Chart(document.getElementById('cWk'),{type:'bar',data:{labels:lab,datasets:[{label:'Distância',data:ws.map(o=>o.n?o.rd/1000:null),backgroundColor:ctx=>part(ctx.dataIndex)?P.mc+'55':P.grad(P.mc,P.mc+'AA')(ctx),borderRadius:{topLeft:8,topRight:8},borderSkipped:'bottom',maxBarThickness:34}]},options:o1,plugins:[lbl]}));
+  const o2 = base(' km/h'); o2.scales.y.min=24; o2.scales.y.max=34; o2.scales.y.beginAtZero=false; o2.interaction={mode:'index',intersect:false};
+  charts.push(new Chart(document.getElementById('cWs'),{type:'line',data:{labels:lab,datasets:[
+    {label:'Velocidade mais alta',data:ws.map(o=>o.sp),borderColor:P.mc,backgroundColor:P.mc+'22',fill:true,borderWidth:2.5,cubicInterpolationMode:'monotone',pointRadius:5,pointHoverRadius:7,pointBorderWidth:2.5,pointBorderColor:ws.map(o=>o.sp>=goal?P.pit:P.mc),pointBackgroundColor:ws.map(o=>o.sp>=goal?P.pit:P.surf)},
+    {label:'Meta 95%',data:ws.map(()=>goal),borderColor:P.pit,borderWidth:2,borderDash:[6,4],pointRadius:0,pointHoverRadius:0,fill:false}]},options:o2}));
+}
+
+
+// ---------- week view (escolher a semana; semana atual só até ao dia atual) ----------
+let selWeek = last.week, wkChart = null;
+const DS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function weekList(){ return [...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>b-a); }
+function weekCut(w){ return w===last.week ? dow(last.date) : 7; }
+function weekSessions(w){ const c=weekCut(w); return SESSIONS.filter(x=>x.week===w && dow(x.date)<=c); }
+function initWkPick(){
+  const sel=document.getElementById('wkpick');
+  sel.innerHTML=weekList().map(w=>{const xs=SESSIONS.filter(x=>x.week===w), a=xs[0].date, b=xs[xs.length-1].date;
+    return '<option value="'+w+'">Semana '+w+' · '+dshort(a)+(a!==b?' – '+dshort(b):'')+(w===last.week?' · atual':'')+'</option>';}).join('');
+  sel.value=String(selWeek);
+  sel.addEventListener('change',()=>{selWeek=+sel.value; renderWeekView(); renderPos();});
+}
+function renderWeekView(){
+  const el=document.getElementById('wkview'); if(!el) return;
+  const w=selWeek, cut=weekCut(w), cur=wkTot(w,cut), cutName=DOWN[cut%7];
+  const xs=weekSessions(w), weeks=[...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b), pw=weeks[weeks.indexOf(w)-1], prv=pw?wkTot(pw,cut):null;
+  const accT=ww=>SESSIONS.filter(x=>x.week===ww && dow(x.date)<=cut).reduce((a,x)=>a+x.accel,0);
+  let h='<div class="card"><span class="tag">Semana '+w+(w===last.week?' · até '+cutName:' · semana completa')+'</span>';
+  h+='<div class="sub" style="margin-top:8px">'+(w===last.week?'A semana atual só conta até à '+cutName+'. ':'')+(prv&&prv.n?'Comparada com a semana '+pw+', também só '+(cut<7?'de segunda a '+cutName.replace('-feira',''):'completa')+'.':'')+'</div>';
+  if(!cur){ h+='<div class="sub" style="margin-top:8px">Sem sessões com GPS neste período.</div></div>'; el.innerHTML=h; return; }
+  const gap=SESSIONS.some(x=>x.gpsGap && (x.week===w || x.week===pw));
+  const T=(n,v,pv,fmt,u)=>{ let d=''; if(prv&&prv.n&&!gap&&pv>0){const p=(v/pv-1)*100,c=Math.abs(p)<5?'info':(p>0?'good':'info'); d=' <span class="t-'+c+'" style="font-weight:600;font-size:13px">'+(p>=5?'▲':p<=-5?'▼':'●')+' '+(p>=0?'+':'')+Math.round(p)+'%</span><small>Semana '+pw+': '+fmt(pv)+u+'</small>';}
+    return '<div><small>'+n+'</small><span class="num">'+fmt(v)+u+'</span>'+d+'</div>'; };
+  h+='<div class="tr" style="margin-top:10px">'+T('Distância total',cur.rd/1000,prv?prv.rd/1000:0,f1,' km')+T('Corrida rápida',cur.hsr,prv?prv.hsr:0,f0,' m')+T('Acelerações',accT(w),pw?accT(pw):0,f0,'')+T('Velocidade mais alta',cur.sp,prv?prv.sp:0,f1,' km/h')+'</div>';
+  if(gap) h+='<div class="sub" style="margin-top:8px">Esta semana ou a anterior tiveram treinos sem GPS (Agronomia), por isso não pondero a comparação.</div>';
+  h+='<div class="sub" style="margin-top:8px">'+cur.n+(cur.n===1?' sessão':' sessões')+(prv&&prv.n?' · '+prv.n+' na semana '+pw:'')+(cur.n!==(prv&&prv.n)&&prv&&prv.n?'. Com número de sessões diferente, os totais não são diretamente comparáveis.':'')+'</div></div>';
+  h+='<div class="card"><b>Dia a dia</b><div class="sub">Metros por dia · vermelho = jogo</div><div class="cv"><canvas id="cWd"></canvas></div><div class="wkleg"><span><i style="background:var(--maroon-soft)"></i>Distância</span><span><i style="background:var(--red)"></i>Distância (jogo)</span><span><i style="background:var(--gold)"></i>Corrida rápida (>18 km/h)</span></div>'
+   +'<div class="scroll" style="margin-top:10px"><table><tr><th>Dia</th><th>Tipo</th><th>Dist.</th><th>Rápida</th><th>Acel.</th><th>Vel.</th></tr>'
+   +xs.map(x=>'<tr><td>'+DS[dow(x.date)%7]+' '+dshort(x.date)+'</td><td>'+(x.type==='Match'?'Jogo':x.combined?'2 sessões':'Treino')+'</td><td>'+f0(x.rd)+(approx(x)?' ~':'')+'</td><td>'+f0(x.hsr)+'</td><td>'+f0(x.accel)+'</td><td>'+f1(x.maxSpeed)+'</td></tr>').join('')+'</table></div></div>';
+  el.innerHTML=h; drawWeekChart();
+}
+function drawWeekChart(){
+  const cv=document.getElementById('cWd'); if(wkChart){wkChart.destroy(); wkChart=null;} if(!cv||!window.Chart) return;
+  const xs=weekSessions(selWeek), cut=weekCut(selWeek), days=[1,2,3,4,5,6,7].filter(d=>selWeek!==last.week||d<=cut);
+  const ink=css('--ink-muted'), grid=css('--line'), ms=css('--maroon-soft'), mc=css('--red'), gold=css('--gold'), inkc=css('--ink'), bgc=css('--bg');
+  const by=d=>xs.filter(x=>dow(x.date)===d);
+  const sum=(d,k)=>{const a=by(d); return a.length?a.reduce((t,x)=>t+x[k],0):null;};
+  const isM=d=>by(d).some(x=>x.type==='Match');
+  const lbl={id:'lbl',afterDatasetsDraw(ch){const c=ch.ctx;c.save();c.font='600 11px Inter, sans-serif';c.textAlign='center';c.fillStyle=inkc;ch.getDatasetMeta(0).data.forEach((e,i)=>{const v=ch.data.datasets[0].data[i];if(v!=null)c.fillText(nf.format(Math.round(v)),e.x,e.y-6)});c.restore()}};
+  Chart.defaults.font.family="Inter, system-ui, sans-serif";
+  wkChart=new Chart(cv,{type:'bar',data:{labels:days.map(d=>DS[d%7]),datasets:[
+    {label:'Distância',data:days.map(d=>sum(d,'rd')),backgroundColor:days.map(d=>isM(d)?mc:ms),borderRadius:{topLeft:6,topRight:6},borderSkipped:'bottom',maxBarThickness:30},
+    {label:'Corrida rápida',data:days.map(d=>sum(d,'hsr')),backgroundColor:gold,borderRadius:{topLeft:6,topRight:6},borderSkipped:'bottom',maxBarThickness:30}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:400},layout:{padding:{top:18}},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:inkc,titleColor:bgc,bodyColor:bgc,cornerRadius:10,padding:10,callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y==null?'-':nf.format(Math.round(c.parsed.y))+' m')}}},
+      scales:{x:{ticks:{color:ink,font:{size:11}},grid:{display:false},border:{color:grid}},y:{beginAtZero:true,ticks:{color:ink,font:{size:11},maxTicksLimit:5},grid:{color:grid+'99',drawTicks:false},border:{display:false}}}},plugins:[lbl]});
+}
+
+// ---------- matches ----------
+function renderGames(){
+  const g = SESSIONS.filter(s=>s.type==='Match' && s.fieldTimeMin).slice().reverse();
+  document.getElementById('games').innerHTML = '<div class="card gch"><b>Intensidade por jogo</b><div class="sub">Metros por minuto em campo · vermelho = corrida rápida (>18 km/h)</div><div class="cv"><canvas id="cGm"></canvas></div></div>' + g.map(s=>{
+    const dpm = s.rd/s.fieldTimeMin, h = s.hsr/s.fieldTimeMin;
+    const before = SESSIONS.slice(0,SESSIONS.indexOf(s)).filter(x=>x.type==='Match' && x.fieldTimeMin);
+    const bm = before.length ? before.reduce((a,x)=>a+x.rd/x.fieldTimeMin,0)/before.length : null;
+    return '<div class="card game"><b>vs '+s.opponent+'</b><div class="sub">'+dshort(s.date)+' · '+Math.floor(s.fieldTimeMin)+' min em campo</div>'
+      + '<div class="big">'+f0(dpm)+' <small>m/min'+(approx(s)?' ~':'')+'</small></div>'
+      + '<div class="sub">Corrida rápida: '+f1(h)+' m/min</div>'+(bm?'<div class="sub">vs jogos anteriores: '+delta(dpm,bm).replace('<small class="d','<small style="display:inline" class="d')+'</div>':'')+'</div>';}).join('');
+}
+
+function buildGames(P){
+  const g = SESSIONS.filter(x=>x.type==='Match' && x.fieldTimeMin); if(!document.getElementById('cGm')||!g.length) return;
+  const tt = Object.assign({},P.tip,{callbacks:{title:i=>'vs '+g[i[0].dataIndex].opponent+' · '+dshort(g[i[0].dataIndex].date),label:c=>c.dataset.label+': '+nf.format(Math.round(c.parsed.y*10)/10)+' m/min',afterBody:i=>Math.floor(g[i[0].dataIndex].fieldTimeMin)+' min em campo'}});
+  charts.push(new Chart(document.getElementById('cGm'),{type:'bar',data:{labels:g.map(x=>x.opponent),datasets:[
+    {label:'Distância',data:g.map(x=>x.rd/x.fieldTimeMin),backgroundColor:P.pr,borderRadius:{topLeft:8,topRight:8},borderSkipped:'bottom',maxBarThickness:34},
+    {label:'Corrida rápida',data:g.map(x=>x.hsr/x.fieldTimeMin),backgroundColor:P.mc,borderRadius:{topLeft:8,topRight:8},borderSkipped:'bottom',maxBarThickness:34}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:8}},plugins:{legend:{display:false},tooltip:tt},interaction:{mode:'index',intersect:false},
+      scales:{x:{grid:{display:false},ticks:{color:P.ink,font:{size:11}},border:{color:P.grid}},y:{beginAtZero:true,ticks:{color:P.ink,font:{size:11},maxTicksLimit:5},grid:{color:P.grid+'99',drawTicks:false},border:{display:false}}}}}));
+}
+// ---------- log ----------
+function renderLog(){
+  const body = document.getElementById('logBody');
+  body.innerHTML = SESSIONS.slice().reverse().map((s,i)=>{
+    const m = s.type==='Match', ap = approx(s)?'~':'';
+    return '<tr class="row" tabindex="0" data-i="'+i+'"><td class="'+(m?'m dj':'')+'">'+dshort(s.date)+(m?' · J':'')+'</td><td class="'+(m?'m':'')+'">'+(m?'Jogo':'Treino')+'</td><td>'+ap+f0(s.rd)+'</td><td>'+f0(s.hsr)+'</td><td>'+s.accel+'</td><td>'+f1(s.maxSpeed)+'</td></tr>'
+      + '<tr class="note" hidden><td colspan="6">'+(s.notes||'Sem nota.')+'</td></tr>';}).join('');
+  body.querySelectorAll('tr.row').forEach((tr,i)=>{ if(i>=10){tr.classList.add('x'); tr.nextElementSibling.classList.add('x');} });
+  const mb=document.getElementById('logMore'); if(mb) mb.onclick=()=>{const sh=body.classList.toggle('short'); mb.textContent=sh?'Ver todas as sessões ('+SESSIONS.length+')':'Mostrar só as 10 últimas';}; if(mb) mb.textContent='Ver todas as sessões ('+SESSIONS.length+')';
+  const toggle = tr => {const n = tr.nextElementSibling; n.hidden = !n.hidden;};
+  body.querySelectorAll('tr.row').forEach(tr=>{
+    tr.addEventListener('click',()=>toggle(tr));
+    tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle(tr);}});
+  });
+}
+
+function wkTot(w,cut){
+  const xs = SESSIONS.filter(x=>x.week===w && (!cut || dow(x.date)<=cut));
+  return xs.length ? {n:xs.length, rd:xs.reduce((a,x)=>a+x.rd,0), hsr:xs.reduce((a,x)=>a+x.hsr,0), sp:Math.max(...xs.map(x=>x.maxSpeed))} : null;
+}
+function renderTrend(s){
+  const cut = dow(s.date), cur = wkTot(s.week,cut), weeks = [...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b);
+  const pw = weeks[weeks.indexOf(s.week)-1], prv = pw ? wkTot(pw,cut) : null;
+  const el = document.getElementById('wktrend');
+  if (!prv || !prv.n){ el.innerHTML=''; return; }
+  if (SESSIONS.some(x=>x.gpsGap && (x.week===s.week || x.week===pw))){ el.innerHTML='<div class="card" style="margin-top:12px"><span class="tag">Esta semana vs. a anterior · semana '+s.week+'</span><div class="sub" style="margin-top:8px">Esta semana ou a anterior tiveram treinos sem GPS (Agronomia), por isso não comparo as semanas.</div></div>'; return; }
+  const T = (n,v,pv,fmt,u,watchUp) => {
+    const p = (v/pv-1)*100, c = Math.abs(p)<5?'info':(p>0?(watchUp&&p>30?'warn':'good'):'info');
+    return '<div><small>'+n+'</small><span class="num">'+fmt(v)+u+'</span> <span class="t-'+c+'" style="font-weight:600;font-size:13px">'+(p>=5?'▲':p<=-5?'▼':'●')+' '+(p>=0?'+':'')+Math.round(p)+'%</span><small>Semana anterior até '+DOWN[cut%7].replace('-feira','')+': '+fmt(pv)+u+'</small></div>';
+  };
+  const same = cur.n===prv.n;
+  el.innerHTML = '<div class="card" style="margin-top:12px"><span class="tag">Esta semana vs. a anterior · semana '+s.week+'</span>'
+    + '<div class="tr" style="margin-top:10px">'
+    + T('Distância total',cur.rd/1000,prv.rd/1000,f1,' km',true)
+    + T('Corrida rápida',cur.hsr,prv.hsr,f0,' m',false)
+    + T('Velocidade mais alta',cur.sp,prv.sp,f1,' km/h',false)
+    + '</div><div class="sub" style="margin-top:8px">'+'Comparação justa: as duas semanas contadas só até à '+DOWN[cut%7]+' (segunda a '+DOWN[cut%7].replace('-feira','')+'). '+cur.n+(cur.n===1?' sessão':' sessões')+' esta semana, '+prv.n+' na anterior'+(same?'.':'. Com número de sessões diferente, os totais não são diretamente comparáveis.')+'</div></div>';
+}
+const pick = document.getElementById('pick');
+pick.innerHTML = SESSIONS.map((x,i)=>'<option value="'+i+'">'+dshort(x.date)+' · '+(x.type==='Match'?'Jogo vs '+x.opponent:'Treino')+'</option>').reverse().join('');
+pick.value = String(SESSIONS.length-1);
+pick.addEventListener('change',()=>renderLatest(SESSIONS[+pick.value]));
+
+const POSWK = {week:45, final:false,
+  note:"Semana 45, parcial: os teus números são de 02–04/11 (3 sessões); os dos 3/4 incluem a semana toda e o jogo. Domingo fecho com os relatórios finais.",
+  /* g: 'in' = 3/4 da equipa de jogo (média oficial), 'n23' = Non 23, me = tu; rd arredondado a 100 m nos outros */
+  rows:[
+  {n:"Simão Bento",p:"Defesa",g:"in",rd:8815,hsr:1515,acc:120,sp:30.4,pc:92.2},
+  {n:"Raffaele Storti",p:"Ponta",g:"in",rd:8203,hsr:1779,acc:144,sp:31.2,pc:90.3},
+  {n:"Manuel Vareiro",p:"Abertura",g:"in",rd:7999,hsr:1439,acc:145,sp:28.9,pc:86.7},
+  {n:"Domingos Cabral",p:"Abertura",g:"in",rd:7900,hsr:1251,acc:176,sp:26.8,pc:82.9},
+  {n:"Manuel Cardoso-Pinto",p:"Ponta",g:"in",rd:7800,hsr:1653,acc:118,sp:28.9,pc:81.1},
+  {n:"Samuel Marques",p:"9",sh:1,g:"in",rd:7700,hsr:1666,acc:119,sp:26.6,pc:80.4},
+  {n:"Hugo Camacho",p:"9",sh:1,g:"in",rd:6900,hsr:1213,acc:103,sp:30.0,pc:95.3},
+  {n:"Vincent Pinto",p:"Defesa",g:"in",rd:6900,hsr:1117,acc:105,sp:30.0,pc:89.1},
+  {n:"Jordan Lee Bacon",p:"Centro",g:"n23",rd:7100,hsr:1085,acc:125,sp:31.5,pc:92.8},
+  {n:"Joris Moura",p:"Abertura",g:"n23",rd:7000,hsr:1253,acc:85,sp:29.8,pc:93.2},
+  {n:"Hugo Aubry",p:"Abertura",g:"n23",rd:6900,hsr:936,acc:119,sp:27.8,pc:88.8},
+  {n:"Vasco Durao",p:"Centro",g:"n23",rd:6500,hsr:912,acc:132,sp:26.8,pc:83.9},
+  {n:"Tomás Amado",p:"9",sh:1,me:1,g:"n23",rd:6800,hsr:1382,acc:131,sp:31.2,pc:93.5}],
+  game:{date:"07/11 vs Chile",avg:{rd:2653,hsr:588,acc:34,pc:86},
+    sh:[{n:"Samuel Marques",min:"1:20:50",rd:3600,hsr:672,acc:34,sp:27.1},{n:"Hugo Camacho",min:"0:13:06",rd:800,hsr:100,acc:4,sp:24.8}]}
+};
+function spark(vals,hi){
+  const mn=Math.min(...vals),mx=Math.max(...vals),W=120,H=30,p=3,n=vals.length;
+  const pts=vals.map((v,k)=>[p+k*(W-2*p)/Math.max(n-1,1),H-p-(mx===mn?.5:(v-mn)/(mx-mn))*(H-2*p)]);
+  const d=pts.map((q,k)=>(k?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
+  const a=hi!=null?pts[hi]:pts[n-1];
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><path d="'+d+'" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="'+a[0]+'" cy="'+a[1]+'" r="3" fill="#fff"/></svg>';
+}
+function renderKpis(){
+  const wp=document.getElementById('wkpill'); if(wp) wp.textContent='Semana '+last.week;
+  const el=document.getElementById('kpis'); if(!el) return;
+  const L=SESSIONS.slice(-14), sp=SESSIONS.map(x=>x.maxSpeed), bi=sp.indexOf(Math.max(...sp));
+  const wk=[...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b).slice(-8).map(w=>wkTot(w).rd/1000);
+  const cw=wkTot(last.week), games=SESSIONS.filter(x=>x.type==='Match');
+  const T=(l,v,u,sv,sub)=>'<div class="kpi"><small>'+l+'</small><b>'+v+'<em>'+u+'</em></b>'+sv+'<span>'+sub+'</span></div>';
+  el.innerHTML=T('Velocidade máx. época',sp[bi].toFixed(1).replace('.',','),'km/h',spark(SESSIONS.slice(-14).map(x=>x.maxSpeed)),dshort(SESSIONS[bi].date)+' · recorde pessoal ~33,4')
+   +T('Semana '+last.week,(cw.rd/1000).toFixed(1).replace('.',','),'km',spark(wk),cw.n+' sessões até agora')
+   +T('Sessões registadas',SESSIONS.length,'',spark(L.map(x=>x.rd)),'distância das últimas 14')
+   +T('Jogos',games.length,'',spark(games.map(x=>x.hsr)),'corrida rápida por jogo');
+}
+function renderPos(){
+  const el=document.getElementById('pos'); if(!el) return;
+  if(selWeek!==POSWK.week){ el.innerHTML='<div class="sub">Comparação com os outros scrum-halves e com os 3/4 só existe para a semana '+POSWK.week+', a partir dos relatórios semanais. Escolhe a semana '+POSWK.week+' acima para ver.</div>'; return; }
+  const R=POSWK.rows, me=R.find(r=>r.me), shs=R.filter(r=>r.sh), inn=R.filter(r=>r.g==='in'), oth=shs.filter(r=>!r.me);
+  const M=[['rd','Distância','m',0],['hsr','Corrida rápida','m >18 km/h',0],['acc','Acelerações','',0],['sp','Velocidade máxima','km/h',1]];
+  const fm=(v,d)=>v.toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const rank=(arr,k)=>1+arr.filter(r=>r[k]>me[k]).length;
+  const avg=(arr,k)=>arr.reduce((a,r)=>a+r[k],0)/arr.length;
+  const cs=getComputedStyle(document.documentElement), C=n=>cs.getPropertyValue(n).trim();
+  let h='<div><span class="tag">Parcial</span> <span class="sub">'+POSWK.note+'</span></div>';
+  h+='<div class="radarbox"><div class="chips">'
+   +M.map(([k,t,u,d])=>{const pd=(me[k]/avg(inn,k)-1)*100,c=Math.abs(pd)<10?'info':(pd>0?'good':'warn'),lab=Math.abs(pd)<10?'Na média':(pd>0?'Acima':'Abaixo');
+     const mx=Math.max(...R.map(r=>r[k])), cls=pd>=10?'up':(pd<=-10?'dn':'');
+     return '<div class="chip '+cls+'"><div class="lf"><div class="t">'+t+'</div><div class="big2">'+fm(me[k],d)+'<small>'+(u||'')+'</small></div>'
+       +'<div class="pb '+c+'"><i style="width:'+(me[k]/mx*100).toFixed(1)+'%"></i><u style="left:'+(avg(inn,k)/mx*100).toFixed(1)+'%" title="Média 3/4"></u></div>'
+       +'<div class="sub" style="margin-top:6px">Média 3/4 '+fm(avg(inn,k),d)+' <span class="pillr '+c+'">'+lab+' '+(pd>=0?'+':'')+Math.round(pd)+'%</span></div></div>'
+       +'<div class="rk">#'+rank(shs,k)+'<small> /3 nos 9</small><br>#'+rank(R,k)+'<small> /'+R.length+' nos 3/4</small></div></div>';}).join('')
+   +'</div>';
+  h+='<div class="dp">'+M.map(([k,t,u,d])=>{
+    const vs=R.map(r=>r[k]), lo=Math.min(...vs), hi=Math.max(...vs), pad=(hi-lo)*.06, a=lo-pad, b=hi+pad, X=v=>((v-a)/(b-a)*100).toFixed(2)+'%', ai=avg(inn,k);
+    return '<div class="row"><div class="rl">'+t+'<small>'+(u||'nº')+'</small></div><div class="trk">'
+     +'<div class="av" style="left:'+X(ai)+'" title="Média 3/4 da equipa de jogo: '+fm(ai,d)+'"><i>média</i></div>'
+     +R.filter(r=>!r.me).map(r=>'<div class="d'+(r.sh?' sh':'')+'" style="left:'+X(r[k])+'" title="'+r.n+': '+fm(r[k],d)+'"></div>').join('')
+     +'<div class="d me" style="left:'+X(me[k])+'" title="Tu: '+fm(me[k],d)+'"></div><div class="mv" style="left:'+X(me[k])+'">'+fm(me[k],d)+'</div>'
+     +'<span class="ax" style="left:0">'+fm(lo,d)+'</span><span class="ax" style="right:0">'+fm(hi,d)+'</span></div></div>';}).join('')+'</div>';
+  h+='<div class="leg2"><span><i style="background:var(--maroon);width:12px;height:12px"></i>Tu</span><span><i style="background:var(--ink-muted);width:10px;height:10px"></i>Outros 9 (Marques, Camacho)</span><span><i style="background:var(--line);width:9px;height:9px"></i>Restantes 3/4</span><span><i style="background:var(--pitch-2);width:3px;height:12px;border-radius:1px"></i>Média 3/4 da equipa de jogo</span></div>';
+  h+='<details><summary>Ver tabela completa por jogador</summary>';
+  M.forEach(([k,t,u,d])=>{const rs=[...R].sort((a,b)=>b[k]-a[k]),mx=rs[0][k];
+    h+='<div class="mb"><b>'+t+'</b>'+rs.map(r=>'<div class="pr '+(r.me?'me':r.sh?'sh':'')+'"><span class="nm">'+r.n+' <small>'+r.p+(r.g==='n23'&&!r.me?' · Non 23':'')+'</small></span><span class="bar"><i style="width:'+(r[k]/mx*100)+'%"></i></span><span class="v">'+fm(r[k],d)+'</span></div>').join('')+'</div>';});
+  h+='</details>';
+  const g=POSWK.game;
+  h+='<div class="mb"><div class="mh"><b>Jogo '+g.date+' · formações de jogo</b><span class="sub">Tu não estavas na lista de 23</span></div><div class="scroll"><table><tr><th>Jogador</th><th>Tempo</th><th>Dist. (m)</th><th>Rápida</th><th>Acel.</th><th>Vel. máx</th></tr>'
+   +g.sh.map(r=>'<tr><td>'+r.n+'</td><td>'+r.min+'</td><td>~'+fm(r.rd,0)+'</td><td>'+r.hsr+'</td><td>'+r.acc+'</td><td>'+fm(r.sp,1)+'</td></tr>').join('')
+   +'<tr><td>Média 3/4 (jogo)</td><td></td><td>'+fm(g.avg.rd,0)+'</td><td>'+g.avg.hsr+'</td><td>'+g.avg.acc+'</td><td>'+g.avg.pc+'%</td></tr></table></div></div>';
+  el.innerHTML=h;
+}
+
+
+function showTab(n){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.toggle('on',p.id==='pg-'+n));
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.p===n));
+  window.scrollTo(0,0);
+  requestAnimationFrame(()=>{ if(typeof charts!=="undefined") charts.forEach(c=>{try{c.resize();c.update('none');}catch(e){}}); });
+}
+document.querySelectorAll('#tabbar button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.p)));
+renderLatest(last); renderKpis(); renderPos(); initWkPick(); renderWeekView(); renderGames(); renderLog();
+if (window.Chart) build();
+</script>
+
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
+</body></html>
