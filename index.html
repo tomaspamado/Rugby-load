@@ -2,7 +2,7 @@
 <html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0E1A2E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Carga">
-<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAALVUlEQVR4Xu3da3BU1QEH8HOf+8xjQ4CEgOEZIIZHQKUIKlNiMxbEIlYdpdovOrUqnXGmH3RqnU5b1I62Y9XR2mqp1BlbOq1VBhUBLa9KU1QIECGEUJIIhJDA7maze3f33s66nTQthOw5Z3fvnsv/N36UTHLz3/8999xzzz33XPTQHIDmAHpoDkBzAD00B6A5gB6aA9AcQA/NAWgOoIfmADQH0ENzAJoD6KE5AM0B9NAcgOYAemgOQHMAPTQHoDmAHpoD0BxAD80BaA6gh+YANAfQQ3MAmgPooTlgWOoefwkuD1wUmgMw5gB6aA5AcwA9NAegOYAemgPQHEAPzQFoDqCH5gA0B9BDcwCaA+ihOQDNAfTQHIDmAHpoDkBzAD00B6A5gB6aA9AcQA/NAcP6N6/ZXmkQURMfAAAAAElFTkSuQmCC"></head><body>
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link id="ati" rel="apple-touch-icon" href="icon.svg"></head><body>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -794,5 +794,6 @@ renderLatest(last); renderKpis(); renderPos(); initWkPick(); renderWeekView(); r
 if (window.Chart) build();
 </script>
 
+<script>(function(){try{var c=document.createElement('canvas');c.width=c.height=180;var x=c.getContext('2d');x.fillStyle='#0E1A2E';x.fillRect(0,0,180,180);x.fillStyle='#D7263D';x.fillRect(0,155,180,25);x.fillStyle='#D9981A';x.font='800 112px Arial Narrow,Arial,sans-serif';x.textAlign='center';x.fillText('9',90,116);document.getElementById('ati').href=c.toDataURL('image/png');}catch(e){}})();</script>
 <script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
 </body></html>
