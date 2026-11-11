@@ -4,7 +4,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Carga">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link id="ati" rel="apple-touch-icon" href="icon.svg"></head><body>
 
-
+<title>Tomás Amado — Training Load</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -291,11 +292,22 @@ body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .tabbar button.on::before{content:"";position:absolute;top:-7px;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--red)}
 .tabbar button.on svg{color:var(--maroon)}
 @media(min-width:760px){.tabbar{left:50%;right:auto;transform:translateX(-50%);width:560px;border-radius:16px 16px 0 0;border:1px solid var(--line);border-bottom:0}}
+
+.ld{display:grid;gap:12px}
+.ld .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ld .tiles div{background:var(--surface-2);border-radius:8px;padding:10px 12px}
+.ld .tiles small{display:block;color:var(--ink-muted);font-size:12px}
+.ld .tiles .num{font-size:26px}
+.ld .zone{position:relative;height:14px;border-radius:7px;margin:14px 0 4px;background:linear-gradient(90deg,var(--info-bg) 0 53.3%,var(--good-bg) 53.3% 86.7%,var(--warn-bg) 86.7%)}
+.ld .zone i{position:absolute;top:-5px;width:4px;height:24px;margin-left:-2px;border-radius:2px;background:var(--ink)}
+.ld .zl{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-muted)}
 </style>
 
 <div class="wrap">
   <div class="pg on" id="pg-hoje">
   <header class="hero"><div class="hl"><div class="hs">Seleção de Portugal · Formação de jogo (9) · Controlo de carga</div><h1>Tomás Amado</h1><div class="up" id="updated"></div></div><span class="pillg" id="wkpill"></span></header>
+
+  <section id="s-carga"><h2>Carga e recuperação</h2><div class="card ld" id="loadcard"></div></section>
 
   <section id="s-sessao"><div class="pick"><label for="pick" class="sub">Ver sessão</label><select id="pick"></select></div><div id="latest"></div><div id="wktrend"></div></section>
 
@@ -314,6 +326,11 @@ body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
       <div class="seg" role="group" aria-label="Período">
         <button type="button" id="r12" aria-pressed="true">Últimas 12</button>
         <button type="button" id="rAll" aria-pressed="false">Todas</button>
+      </div>
+      <div class="seg" role="group" aria-label="Tipo de sessão">
+        <button type="button" id="fAll" aria-pressed="true">Tudo</button>
+        <button type="button" id="fTr" aria-pressed="false">Treinos</button>
+        <button type="button" id="fMa" aria-pressed="false">Jogos</button>
       </div></div>
     <div class="legend"><span><i style="background:var(--maroon-soft)"></i>Treino</span><span><i style="background:var(--red)"></i>Jogo</span><span><i class="ln"></i>Média dos Backs</span></div>
     <div class="charts">
@@ -519,10 +536,10 @@ function renderLatest(s){
 
 // ---------- charts ----------
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-let range = 12, charts = [];
+let range = 12, charts = [], typeFilter = 'all';
 function build(){
   charts.forEach(c=>c.destroy()); charts = [];
-  const src = range===0 ? SESSIONS : SESSIONS.slice(-range);
+  const pool = SESSIONS.filter(s=>typeFilter==='all'||(typeFilter==='match'?s.type==='Match':s.type!=='Match')), src = range===0 ? pool : pool.slice(-range);
   const labels = src.map(s=>dshort(s.date));
   const ink = css('--ink-muted'), grid = css('--line');
   const pr=css('--maroon'), mc=css('--red'), ms=css('--maroon-soft'), gold=css('--gold'), pit=css('--pitch-2'), surf=css('--surface'), inkc=css('--ink'), bgc=css('--bg');
@@ -566,6 +583,8 @@ function setRange(n){
 }
 document.getElementById('r12').onclick = ()=>setRange(12);
 document.getElementById('rAll').onclick = ()=>setRange(0);
+function setType(t){ typeFilter=t; [['fAll','all'],['fTr','train'],['fMa','match']].forEach(([id,k])=>document.getElementById(id).setAttribute('aria-pressed',t===k)); build(); }
+document.getElementById('fAll').onclick=()=>setType('all'); document.getElementById('fTr').onclick=()=>setType('train'); document.getElementById('fMa').onclick=()=>setType('match');
 
 // ---------- weeks ----------
 const DOWN = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
@@ -790,7 +809,35 @@ function showTab(n){
   requestAnimationFrame(()=>{ if(typeof charts!=="undefined") charts.forEach(c=>{try{c.resize();c.update('none');}catch(e){}}); });
 }
 document.querySelectorAll('#tabbar button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.p)));
-renderLatest(last); renderKpis(); renderPos(); initWkPick(); renderWeekView(); renderGames(); renderLog();
+
+// ---------- carga e recuperação (Hoje) ----------
+function renderLoad(){
+  const el=document.getElementById('loadcard'); if(!el) return;
+  const end=new Date(last.date+'T00:00:00').getTime(), within=d=>SESSIONS.filter(x=>{const t=new Date(x.date+'T00:00:00').getTime();return t<=end && end-t<d*DAY;});
+  const a7=within(7), c28=within(28);
+  const sum=(xs,k)=>xs.reduce((t,x)=>t+x[k],0);
+  const ac=sum(a7,'rd'), ch=sum(c28,'rd')/4, ratio=ch?ac/ch:null;
+  const gap=SESSIONS.some(x=>x.gpsGap && end-new Date(x.date+'T00:00:00').getTime()<28*DAY);
+  let z; if(ratio==null) z={k:'info',b:'Sem dados',t:''}; else if(ratio>1.5) z={k:'bad',b:'Carga a subir demasiado',t:'Semana muito acima do teu habitual: poupa o próximo treino e recupera bem.'}; else if(ratio>1.3) z={k:'warn',b:'Carga alta',t:'Acima do teu habitual: cuida do sono, da comida e da recuperação.'}; else if(ratio>=0.8) z={k:'good',b:'Zona segura',t:'Carga dentro do que o teu corpo está habituado.'}; else z={k:'info',b:'Carga baixa',t:'Abaixo do habitual: há margem para treinar mais, se te sentires bem.'};
+  if(gap) z.t+=' Atenção: houve treinos sem GPS (Agronomia), por isso o valor pode estar subestimado.';
+  const heavy=a7.filter(x=>x.rd>HEAVY).length, matches=a7.filter(x=>x.type==='Match').length;
+  const goal=MAXREF*0.95, sp=SESSIONS.filter(x=>x.maxSpeed>=goal), lastSp=sp.length?sp[sp.length-1]:null;
+  const dsp=lastSp?Math.round((end-new Date(lastSp.date+'T00:00:00').getTime())/DAY):null;
+  const wkSp=Math.max(...SESSIONS.filter(x=>x.week===last.week).map(x=>x.maxSpeed));
+  const pos=ratio==null?0:Math.max(0,Math.min(100,ratio/1.5*100));
+  const dd=Math.round((end-new Date(last.date+'T00:00:00').getTime())/DAY);
+  el.innerHTML='<div><span class="tag">7 dias até '+dshort(last.date)+' vs. média semanal das últimas 4 semanas</span></div>'
+   +'<div class="light s-'+z.k+'" style="margin-top:0"><small>Estado</small><b class="t-'+z.k+'">'+z.b+(ratio?' · '+ratio.toFixed(2).replace('.',','):'')+'</b><span>'+z.t+'</span></div>'
+   +'<div><div class="zone"><i style="left:'+pos.toFixed(1)+'%"></i></div><div class="zl" style="position:relative;height:14px"><span style="position:absolute;left:0">0</span><span style="position:absolute;left:53.3%;transform:translateX(-50%)">0,8</span><span style="position:absolute;left:86.7%;transform:translateX(-50%)">1,3</span><span style="position:absolute;right:0">1,5+</span></div></div>'
+   +'<div class="tiles">'
+   +'<div><small>Distância nos últimos 7 dias</small><span class="num">'+f1(ac/1000)+' km</span><small>Teu habitual: '+f1(ch/1000)+' km/semana</small></div>'
+   +'<div><small>Dias pesados (>3500 m)</small><span class="num">'+heavy+'</span><small>'+(matches?matches+(matches===1?' jogo':' jogos')+' nesta janela':'Sem jogos nesta janela')+'</small></div>'
+   +'<div><small>Velocidade máx. da semana</small><span class="num">'+f1(wkSp)+' km/h</span><small>Meta 95%: '+f1(goal)+'</small></div>'
+   +'<div><small>Último sprint ≥95%</small><span class="num">'+(lastSp?(dsp===0?'hoje':dsp+' d'):'-')+'</span><small>'+(lastSp?f1(lastSp.maxSpeed)+' km/h · '+dshort(lastSp.date):'ainda nenhum')+'</small></div></div>'
+   +'<div class="sub">Como ler: compara a carga dos últimos 7 dias com o que costumas fazer. Entre 0,8 e 1,3 é a zona segura; acima de 1,5 o risco de lesão sobe. É um guia, não uma regra: manda o que sentes e o que o teu S&amp;C decidir.'+(dd>0?' Último GPS há '+dd+' d.':'')+'</div>';
+}
+
+renderLoad(); renderLatest(last); renderKpis(); renderPos(); initWkPick(); renderWeekView(); renderGames(); renderLog();
 if (window.Chart) build();
 </script>
 
