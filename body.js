@@ -38,3 +38,8 @@ function renderBody(){
    +'<div class="sub">Massa gorda, massa magra e massa muscular são estimadas por equações (Evans 2007, Lee 2000) e em atletas de rugby de elite não são exatas em valor absoluto: lê-as como tendência. Fonte: relatório de composição corporal (ISAK).</div></details>';
 }
 renderBody();
+
+// ---------- semana 45 fechada: relatórios finais recebidos ----------
+POSWK.final = true;
+POSWK.note = "Semana 45 fechada com os relatórios finais (Backs em jogo, Non 23 e jogo). Os teus números são de 02, 03 e 04/11 (3 sessões); os dos 3/4 incluem a semana toda e o jogo, por isso a distância não é diretamente comparável.";
+(function(){ const base = renderPos; renderPos = function(){ base(); document.querySelectorAll('#pos .tag').forEach(t=>{ if(t.textContent==='Parcial') t.textContent = POSWK.final ? 'Final' : 'Parcial'; }); }; renderPos(); })();
