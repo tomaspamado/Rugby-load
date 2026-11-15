@@ -1,5 +1,5 @@
-// ---------- Troféus: medalhas, séries e nível (calculados a partir das sessões da Seleção) ----------
-// Só contam sessões da Seleção. Semanas sem GPS (gpsGap) não quebram séries: são ignoradas.
+// ---------- Troféus: medalhas, séries e nível ----------
+// Contam todas as sessões. Na Seleção compara-se com o grupo; nos Lusitanos, com a tua própria média. Semanas sem GPS (gpsGap) não quebram séries: são ignoradas.
 (function(){
   const TIER = {gold:{n:'Ouro',c:'#C99A1E'}, silver:{n:'Prata',c:'#8D98A8'}, bronze:{n:'Bronze',c:'#A8693A'}, base:{n:'',c:'#1F3B63'}};
   const ICON = {
@@ -10,12 +10,12 @@
   };
   const KINDS = [
     {k:'speed', t:'Meta de velocidade', d:'Chegar a 95% do teu máximo (31,7 km/h) numa semana. Prata: 97%. Ouro: novo recorde da época.', pts:{bronze:3,silver:5,gold:8}},
-    {k:'four',  t:'Quatro de quatro', d:'Numa sessão, acima da média do grupo em distância, corrida rápida, acelerações e velocidade.', pts:{base:2}},
+    {k:'four',  t:'Quatro de quatro', d:'Numa sessão, acima em distância, corrida rápida, acelerações e velocidade. Na Seleção, contra a média do grupo; nos Lusitanos, contra a tua própria média.', pts:{base:2}},
     {k:'nine',  t:'Número 1 dos 9', d:'Primeiro entre os scrum-halves em pelo menos 3 das 4 métricas da semana.', pts:{base:5}},
     {k:'load',  t:'Carga certa', d:'Semana fechada com a carga entre 0,8 e 1,3 do teu habitual (a zona segura).', pts:{base:2}}
   ];
-  const LEVELS = [{n:'Bronze',min:0},{n:'Prata',min:15},{n:'Ouro',min:40},{n:'Elite',min:80}];
-  const sel = SESSIONS.filter(s=>teamOf(s)==='Seleção');
+  const LEVELS = [{n:'Bronze',min:0},{n:'Prata',min:20},{n:'Ouro',min:50},{n:'Elite',min:100}];
+  const sel = SESSIONS.slice();
   const weeks = [...new Set(sel.map(s=>s.week))].sort((a,b)=>a-b);
   const medals = [];
   const add = (k,tier,date,week,note)=>medals.push({k,tier:tier||'base',date,week,note:note||''});
@@ -28,12 +28,17 @@
     const pct = best.maxSpeed/MAXREF;
     if(pct>=0.95){ const tier = best.maxSpeed>prevBest ? 'gold' : pct>=0.97 ? 'silver' : 'bronze'; add('speed',tier,best.date,w,best.maxSpeed.toFixed(1).replace('.',',')+' km/h ('+Math.round(pct*100)+'%)'); }
     // Quatro de quatro (sessão)
-    xs.forEach(s=>{ if(s.rd>s.avgRd && s.hsr>s.avgHsr && s.accel>s.avgAccel && s.maxPct>s.avgMaxPct) add('four','base',s.date,w,'Acima do grupo nas 4 métricas'); });
+    xs.forEach(s=>{
+      if(teamOf(s)==='Seleção'){ if(s.rd>s.avgRd && s.hsr>s.avgHsr && s.accel>s.avgAccel && s.maxPct>s.avgMaxPct) add('four','base',s.date,w,'Acima do grupo nas 4 métricas'); }
+      else if(s.type!=='Match' && !s.shortSession){ // Lusitanos: contra a tua própria média (5 treinos anteriores)
+        const pv = SESSIONS.slice(0,SESSIONS.indexOf(s)).filter(x=>x.type!=='Match'&&!x.combined&&!x.shortSession).slice(-5);
+        if(pv.length>=3){ const m=k=>pv.reduce((a,x)=>a+x[k],0)/pv.length; if(s.rd>m('rd') && s.hsr>m('hsr') && s.accel>m('accel') && s.maxSpeed>m('maxSpeed')) add('four','base',s.date,w,'Acima da tua média nas 4 métricas'); }
+      } });
     // Número 1 dos 9 (semana, só onde há relatório semanal)
     const P = w===45 ? POSWK : w===46 ? POSWK46 : null;
     if(P){ const me=P.rows.find(r=>r.me), shs=P.rows.filter(r=>r.sh&&!r.me); const wins=['rd','hsr','acc','sp'].filter(k=>shs.every(r=>me[k]>r[k])).length; if(wins>=3) add('nine','base',xs[xs.length-1].date,w,'#1 dos 9 em '+wins+' de 4'); }
     // Carga certa (semana fechada)
-    if(!gap){ const lastS = xs[xs.length-1], r = meanRd(7,lastS)/meanRd(28,lastS); if(r>=0.8 && r<=1.3) add('load','base',lastS.date,w,'Rácio '+r.toFixed(2).replace('.',',')); }
+    if(!gap){ const lastS = xs[xs.length-1], n28 = SESSIONS.filter(x=>x.date<=lastS.date && (new Date(lastS.date)-new Date(x.date))/86400000<28).length, r = meanRd(7,lastS)/meanRd(28,lastS); if(n28>=6) if(r>=0.8 && r<=1.3) add('load','base',lastS.date,w,'Rácio '+r.toFixed(2).replace('.',',')); }
   });
 
   // séries (semanas seguidas); semanas com gpsGap são ignoradas
@@ -64,7 +69,7 @@
   const html = '<h2>Troféus</h2><div class="card tro">'
    +'<div class="lvl"><small>O teu nível</small><b>'+lv.n+'</b><div class="lbar"><i style="width:'+(nx?Math.min(100,(pts-lv.min)/(nx.min-lv.min)*100):100).toFixed(0)+'%"></i></div><span>'+pts+' pontos'+(nx?' · faltam '+(nx.min-pts)+' para '+nx.n:' · nível máximo')+'</span></div>'
    +'<div class="sk">'+strk(0,'semanas seguidas com a meta de velocidade',ST.speed)+strk(0,'semanas seguidas com a carga certa',ST.load)+strk(0,'semanas seguidas como nº 1 dos 9',ST.nine)+'</div>'
-   +'<div class="sub" style="margin-top:8px">Só contam sessões da Seleção. Semanas sem GPS não quebram as séries. Não há medalhas por correr mais: só pelo que interessa.</div>'
+   +'<div class="sub" style="margin-top:8px">Contam todas as sessões: na Seleção comparas com o grupo, nos Lusitanos contigo próprio. Semanas sem GPS não quebram as séries. Não há medalhas por correr mais: só pelo que interessa.</div>'
    +'<details class="fold"><summary><span>Medalhas ('+medals.length+')</span></summary><div class="shelf">'+shelf+'</div>'
    +(recent.length?'<div class="rec"><b style="font-size:13px">Mais recentes</b>'+recent.map(m=>'<div>'+medal(m.k,m.tier)+'<span>'+fd(m.date)+' · '+KINDS.find(x=>x.k===m.k).t+(m.tier!=='base'?' ('+TIER[m.tier].n+')':'')+'</span></div>').join('')+'</div>':'')
    +'</details></div>';
