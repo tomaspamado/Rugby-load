@@ -1,4 +1,5 @@
 // ---------- helpers ----------
+const spdPct = () => { try{ const v = +(JSON.parse(localStorage.getItem('targets')||'{}').sp); return v>=50 && v<=100 ? v/100 : 0.95; }catch(e){ return 0.95; } }; // alvo de velocidade: % do máximo pessoal (editável em Mais)
 const MAXREF = 33.4; // personal top speed reference (km/h)
 const nf = new Intl.NumberFormat('pt-PT');
 const f0 = v => nf.format(Math.round(v));
@@ -43,14 +44,14 @@ function perMinute(s){
     + '<div class="sub" style="margin-top:6px">Comparação justa do jogo: por minuto em campo ('+Math.floor(s.fieldTimeMin)+' min). Os Backs jogam tempos diferentes, por isso aqui comparas só contigo.</div>';
 }
 function speedGoal(s){
-  const goal = MAXREF*0.95, wk = SESSIONS.filter(x=>x.week===s.week);
+  const goal = MAXREF*spdPct(), wk = SESSIONS.filter(x=>x.week===s.week);
   const best = wk.reduce((a,x)=>x.maxSpeed>a.maxSpeed?x:a, wk[0]);
   const done = best.maxSpeed >= goal;
   const pct = Math.min(100, best.maxSpeed/MAXREF/1*100);
   return '<div class="goal"><b>Meta de velocidade da semana</b>'
     + '<div><span class="num">'+f1(best.maxSpeed)+' km/h</span> <span class="sub">('+Math.round(best.maxSpeed/MAXREF*100)+'% do teu máximo)</span> · <span class="'+(done?'t-good':'t-warn')+'" style="font-weight:600">'+(done?'✓ Meta cumprida':'Ainda não cumprida')+'</span></div>'
     + '<div class="gbar"><i style="width:'+pct.toFixed(1)+'%"></i><u style="left:'+(goal/MAXREF*100).toFixed(1)+'%"></u></div>'
-    + '<div class="sub">Meta: chegar a 95% do máximo ('+f1(goal)+' km/h) pelo menos uma vez por semana. A marca verde é a meta.'+(done?'':' Faltam '+f1(goal-best.maxSpeed)+' km/h.')+'</div></div>';
+    + '<div class="sub">Meta: chegar a '+Math.round(spdPct()*100)+'% do máximo ('+f1(goal)+' km/h) pelo menos uma vez por semana. A marca verde é a meta.'+(done?'':' Faltam '+f1(goal-best.maxSpeed)+' km/h.')+'</div></div>';
 }
 function prevSame(s, n){
   const i = SESSIONS.indexOf(s);
@@ -157,10 +158,10 @@ function build(){
   mk('cHsr','Tu','hsr','avgHsr',' m');
   mk('cAcc','Tu','accel','avgAccel','');
   // speed: bars green once they reach the weekly 95% goal
-  const goal = MAXREF*0.95, spFill = ctx => { const v=src[ctx.dataIndex].maxSpeed; return v>=goal ? grad(pit,pit+'99')(ctx) : barFill(ctx); };
+  const goal = MAXREF*spdPct(), spFill = ctx => { const v=src[ctx.dataIndex].maxSpeed; return v>=goal ? grad(pit,pit+'99')(ctx) : barFill(ctx); };
   const sd = [{type:'bar', label:'Tu', data:src.map(s=>s.maxSpeed), backgroundColor:spFill, borderRadius:{topLeft:8,topRight:8}, borderSkipped:'bottom', maxBarThickness:26, order:2},
               {type:'line', label:'Máximo pessoal', data:src.map(()=>MAXREF), borderColor:ink, borderDash:[3,5], borderWidth:1.5, pointRadius:0, pointHoverRadius:0, order:1},
-              {type:'line', label:'Meta 95%', data:src.map(()=>goal), borderColor:pit, borderWidth:2.5, pointRadius:0, pointHoverRadius:0, order:1}];
+              {type:'line', label:'Meta '+Math.round(spdPct()*100)+'%', data:src.map(()=>goal), borderColor:pit, borderWidth:2.5, pointRadius:0, pointHoverRadius:0, order:1}];
   const so = opts(' km/h'); so.scales.y.max = 36;
   charts.push(new Chart(document.getElementById('cSpd'), {data:{labels, datasets:sd}, options:so, plugins:[peak]}));
   drawWeekChart(); buildGames({mc,ms,pit,ink,grid,tip,pr});
@@ -191,7 +192,7 @@ function weekData(cut){
 function renderWeeks(){}
 function buildWeeks(opts,P){
   const ws = weekData(), lab = ws.map(o=>dshort(o.d0)), cur = last.week;
-  const goal = MAXREF*0.95;
+  const goal = MAXREF*spdPct();
   const base = (unit)=>{const o=opts(unit); o.layout={padding:{top:18}}; o.plugins.tooltip=Object.assign({},P.tip,{callbacks:{title:i=>{const o=ws[i[0].dataIndex];return 'Semana '+o.k+(o.n?' · '+dshort(o.d0)+' – '+dshort(o.d1):' · sem sessões até '+DOWN[dow(last.date)])},label:c=>c.dataset.label+': '+nf.format(Math.round(c.parsed.y*10)/10)+unit,afterBody:i=>{const o=ws[i[0].dataIndex];return o.n+(o.n===1?' sessão':' sessões')+(o.gap?' · treinos sem GPS':'')+(o.k===cur?' · semana em curso':'')}}}); o.scales.x.ticks.maxRotation=0; return o;};
   const lbl = {id:'lbl',afterDatasetsDraw(ch){const m=ch.getDatasetMeta(0),c=ch.ctx;c.save();c.font='600 11px Inter, sans-serif';c.textAlign='center';c.fillStyle=P.ink;m.data.forEach((e,i)=>{const v=ch.data.datasets[0].data[i];if(v!=null)c.fillText(nf.format(Math.round(v*10)/10),e.x,e.y-6)});c.restore()}};
   const part = i => ws[i].gap || ws[i].k===cur;
@@ -200,7 +201,7 @@ function buildWeeks(opts,P){
   const o2 = base(' km/h'); o2.scales.y.min=24; o2.scales.y.max=34; o2.scales.y.beginAtZero=false; o2.interaction={mode:'index',intersect:false};
   charts.push(new Chart(document.getElementById('cWs'),{type:'line',data:{labels:lab,datasets:[
     {label:'Velocidade mais alta',data:ws.map(o=>o.sp),borderColor:P.mc,backgroundColor:P.mc+'22',fill:true,borderWidth:2.5,cubicInterpolationMode:'monotone',pointRadius:5,pointHoverRadius:7,pointBorderWidth:2.5,pointBorderColor:ws.map(o=>o.sp>=goal?P.pit:P.mc),pointBackgroundColor:ws.map(o=>o.sp>=goal?P.pit:P.surf)},
-    {label:'Meta 95%',data:ws.map(()=>goal),borderColor:P.pit,borderWidth:2,borderDash:[6,4],pointRadius:0,pointHoverRadius:0,fill:false}]},options:o2}));
+    {label:'Meta '+Math.round(spdPct()*100)+'%',data:ws.map(()=>goal),borderColor:P.pit,borderWidth:2,borderDash:[6,4],pointRadius:0,pointHoverRadius:0,fill:false}]},options:o2}));
 }
 
 
@@ -438,7 +439,7 @@ function renderLoad(){
   let z; if(ratio==null) z={k:'info',b:'Sem dados',t:''}; else if(ratio>1.5) z={k:'bad',b:'Carga a subir demasiado',t:'Semana muito acima do teu habitual: poupa o próximo treino e recupera bem.'}; else if(ratio>1.3) z={k:'warn',b:'Carga alta',t:'Acima do teu habitual: cuida do sono, da comida e da recuperação.'}; else if(ratio>=0.8) z={k:'good',b:'Zona segura',t:'Carga dentro do que o teu corpo está habituado.'}; else z={k:'info',b:'Carga baixa',t:'Abaixo do habitual: há margem para treinar mais, se te sentires bem.'};
   if(gap) z.t+=' Atenção: houve treinos sem GPS (Agronomia), por isso o valor pode estar subestimado.';
   const heavy=a7.filter(x=>x.rd>HEAVY).length, matches=a7.filter(x=>x.type==='Match').length;
-  const goal=MAXREF*0.95, sp=SESSIONS.filter(x=>x.maxSpeed>=goal), lastSp=sp.length?sp[sp.length-1]:null;
+  const goal=MAXREF*spdPct(), sp=SESSIONS.filter(x=>x.maxSpeed>=goal), lastSp=sp.length?sp[sp.length-1]:null;
   const dsp=lastSp?Math.round((end-new Date(lastSp.date+'T00:00:00').getTime())/DAY):null;
   const wkSp=Math.max(...SESSIONS.filter(x=>x.week===last.week).map(x=>x.maxSpeed));
   const pos=ratio==null?0:Math.max(0,Math.min(100,ratio/1.5*100));
@@ -449,8 +450,8 @@ function renderLoad(){
    +'<div class="tiles">'
    +'<div><small>Distância nos últimos 7 dias</small><span class="num">'+f1(ac/1000)+' km</span><small>Teu habitual: '+f1(ch/1000)+' km/semana</small></div>'
    +'<div><small>Dias pesados (>3500 m)</small><span class="num">'+heavy+'</span><small>'+(matches?matches+(matches===1?' jogo':' jogos')+' nesta janela':'Sem jogos nesta janela')+'</small></div>'
-   +'<div><small>Velocidade máx. da semana</small><span class="num">'+f1(wkSp)+' km/h</span><small>Meta 95%: '+f1(goal)+'</small></div>'
-   +'<div><small>Último sprint ≥95%</small><span class="num">'+(lastSp?(dsp===0?'hoje':dsp+' d'):'-')+'</span><small>'+(lastSp?f1(lastSp.maxSpeed)+' km/h · '+dshort(lastSp.date):'ainda nenhum')+'</small></div></div>'
+   +'<div><small>Velocidade máx. da semana</small><span class="num">'+f1(wkSp)+' km/h</span><small>Meta '+Math.round(spdPct()*100)+'%: '+f1(goal)+'</small></div>'
+   +'<div><small>Último sprint ≥'+Math.round(spdPct()*100)+'%</small><span class="num">'+(lastSp?(dsp===0?'hoje':dsp+' d'):'-')+'</span><small>'+(lastSp?f1(lastSp.maxSpeed)+' km/h · '+dshort(lastSp.date):'ainda nenhum')+'</small></div></div>'
    +'<div class="sub">Como ler: compara a carga dos últimos 7 dias com o que costumas fazer. Entre 0,8 e 1,3 é a zona segura; acima de 1,5 o risco de lesão sobe. É um guia, não uma regra: manda o que sentes e o que o teu S&amp;C decidir.'+(dd>0?' Último GPS há '+dd+' d.':'')+'</div>';
 }
 
