@@ -135,7 +135,9 @@
     const ls = document.getElementById('langseg');
     if(ls){ const lc = s.querySelector('#langcard'); const h = ls.querySelector('h2'); if(h){ const h3 = document.createElement('h3'); h3.style.marginTop = '0'; h3.textContent = h.textContent; h.replaceWith(h3); } while(ls.firstChild) lc.appendChild(ls.firstChild); ls.remove(); lc.id = 'langseg'; }
     const msg = s.querySelector('#tgmsg');
-    const read = c => { const raw = s.querySelector('#tg-'+c.k).value.trim().replace(/\s/g,'').replace(',','.'); const v = parseFloat(raw); return isFinite(v) ? c.from(v) : NaN; };
+    // Postel: aceita "9,5", "9.5", "9 500", "9.500", "9,5 km", "2500 m", "95%", "31,7 km/h"
+    const num = raw => { let t = String(raw).toLowerCase().replace(/[^\d.,]/g,''); if(/^\d{1,3}([.,]\d{3})+$/.test(t)) t = t.replace(/[.,]/g,''); else t = t.replace(',','.'); return parseFloat(t); };
+    const read = c => { let v = num(s.querySelector('#tg-'+c.k).value); if(c.k==='rd' && v>=200) v = v/1000; if(c.k==='sp' && v>=20 && v<50) v = Math.round(v/MAXREF*1000)/10; return isFinite(v) ? c.from(v) : NaN; };
     s.querySelector('#tgsave').addEventListener('click', () => {
       const o = {}; let bad = null;
       KEYS.forEach(c => { const v = read(c); if(!(v >= c.from(c.min) && v <= c.from(c.max))) bad = bad || c; else o[c.k] = v; });
