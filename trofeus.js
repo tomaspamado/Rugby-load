@@ -25,11 +25,13 @@
   ];
   // Estrada de níveis (ao estilo da estrada de troféus): do mais baixo para o mais alto
   const LEVELS = [
-    {n:T('Estreante','Rookie'),min:0,c:'#A8693A'}, {n:T('Suplente','Bench'),min:10,c:'#A8693A'},
-    {n:T('Titular','Starter'),min:25,c:'#8D98A8'}, {n:T('Motor','Engine'),min:40,c:'#8D98A8'},
-    {n:T('Faísca','Spark'),min:55,c:'#C99A1E'}, {n:T('Internacional','International'),min:70,c:'#C99A1E'},
-    {n:T('Capitão','Captain'),min:90,c:'#2E7D5B'}, {n:T('Lenda','Legend'),min:115,c:'#2E7D5B'},
-    {n:T('Imortal','Immortal'),min:145,c:'#C8102E'}, {n:T('Lenda do 9','Legend of the 9'),min:180,c:'#C8102E'}
+    {n:T('Estreante','Rookie'),min:0,c:'#A8693A'}, {n:T('Aspirante','Hopeful'),min:12,c:'#A8693A'},
+    {n:T('Júnior','Junior'),min:28,c:'#A8693A'}, {n:T('Promessa','Prospect'),min:45,c:'#8D98A8'},
+    {n:T('Reserva','Reserve'),min:60,c:'#8D98A8'}, {n:T('Suplente','Bench'),min:85,c:'#8D98A8'},
+    {n:T('Titular','Starter'),min:110,c:'#C99A1E'}, {n:T('Motor','Engine'),min:140,c:'#C99A1E'},
+    {n:T('Faísca','Spark'),min:175,c:'#C99A1E'}, {n:T('Internacional','International'),min:215,c:'#2E7D5B'},
+    {n:T('Capitão','Captain'),min:260,c:'#2E7D5B'}, {n:T('Lenda','Legend'),min:310,c:'#2E7D5B'},
+    {n:T('Imortal','Immortal'),min:370,c:'#C8102E'}, {n:T('Mito','Myth'),min:440,c:'#C8102E'}
   ];
   const sel = SESSIONS.slice();
   const weeks = [...new Set(sel.map(s=>s.week))].sort((a,b)=>a-b);

@@ -1,5 +1,5 @@
 // Service worker. Mude VER ao publicar; index.html vai primeiro à rede, por isso nunca fica desatualizado online.
-const VER='carga-v24';
+const VER='carga-v25';
 const SHELL=['./','./index.html','./style.css','./data.js','./app.js','./body.js','./ajustes.js','./trofeus.js','./hoje.js','./paginas.js','./movimento.js','./alvos.js','./traducao.js','./grafico.js','./manifest.webmanifest','./icon.svg','https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(VER).then(c=>Promise.all(SHELL.map(u=>c.add(u).catch(()=>{})))).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==VER).map(n=>caches.delete(n)))).then(()=>self.clients.claim()));});
