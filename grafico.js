@@ -56,6 +56,7 @@
     el.animate([{left:'0px',top:'0px',width:vw()+'px',height:vh()+'px',borderRadius:'0px',opacity:1},{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',borderRadius:'12px',opacity:1}], {duration:300, easing:EASE, fill:'forwards'}).onfinish = () => { el.animate([{opacity:1},{opacity:0}], {duration:120, fill:'forwards'}).onfinish = done; };
   }
   addEventListener('popstate', () => { if(sheet) closeSheet(); });
+  window.GSHEET = openSheet;
   addEventListener('keydown', e => { if(e.key === 'Escape' && sheet) history.back(); });
 
   // ---------- definição das 4 métricas ----------
