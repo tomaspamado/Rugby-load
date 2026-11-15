@@ -1,4 +1,4 @@
-// ---------- Troféus: medalhas, séries e nível ----------
+// ---------- Troféus: medalhas, séries e nível (calculados a partir das sessões da Seleção) ----------
 // Contam todas as sessões. Na Seleção compara-se com o grupo; nos Lusitanos, com a tua própria média. Semanas sem GPS (gpsGap) não quebram séries: são ignoradas.
 (function(){
   const TIER = {gold:{n:'Ouro',c:'#C99A1E'}, silver:{n:'Prata',c:'#8D98A8'}, bronze:{n:'Bronze',c:'#A8693A'}, base:{n:'',c:'#1F3B63'}};
@@ -38,7 +38,7 @@
     const P = w===45 ? POSWK : w===46 ? POSWK46 : null;
     if(P){ const me=P.rows.find(r=>r.me), shs=P.rows.filter(r=>r.sh&&!r.me); const wins=['rd','hsr','acc','sp'].filter(k=>shs.every(r=>me[k]>r[k])).length; if(wins>=3) add('nine','base',xs[xs.length-1].date,w,'#1 dos 9 em '+wins+' de 4'); }
     // Carga certa (semana fechada)
-    if(!gap){ const lastS = xs[xs.length-1], n28 = SESSIONS.filter(x=>x.date<=lastS.date && (new Date(lastS.date)-new Date(x.date))/86400000<28).length, r = meanRd(7,lastS)/meanRd(28,lastS); if(n28>=6) if(r>=0.8 && r<=1.3) add('load','base',lastS.date,w,'Rácio '+r.toFixed(2).replace('.',',')); }
+    if(!gap && (w<last.week || dow(xs[xs.length-1].date)>=6)){ const lastS = xs[xs.length-1], n28 = SESSIONS.filter(x=>x.date<=lastS.date && (new Date(lastS.date)-new Date(x.date))/86400000<28).length, r = meanRd(7,lastS)/meanRd(28,lastS); if(n28>=6) if(r>=0.8 && r<=1.3) add('load','base',lastS.date,w,'Rácio '+r.toFixed(2).replace('.',',')); }
   });
 
   // séries (semanas seguidas); semanas com gpsGap são ignoradas
@@ -70,10 +70,10 @@
    +'<div class="lvl"><small>O teu nível</small><b>'+lv.n+'</b><div class="lbar"><i style="width:'+(nx?Math.min(100,(pts-lv.min)/(nx.min-lv.min)*100):100).toFixed(0)+'%"></i></div><span>'+pts+' pontos'+(nx?' · faltam '+(nx.min-pts)+' para '+nx.n:' · nível máximo')+'</span></div>'
    +'<div class="sk">'+strk(0,'semanas seguidas com a meta de velocidade',ST.speed)+strk(0,'semanas seguidas com a carga certa',ST.load)+strk(0,'semanas seguidas como nº 1 dos 9',ST.nine)+'</div>'
    +'<div class="sub" style="margin-top:8px">Contam todas as sessões: na Seleção comparas com o grupo, nos Lusitanos contigo próprio. Semanas sem GPS não quebram as séries. Não há medalhas por correr mais: só pelo que interessa.</div>'
-   +'<details class="fold"><summary><span>Medalhas ('+medals.length+')</span></summary><div class="shelf">'+shelf+'</div>'
+   +'<details class="fold" open><summary><span>Medalhas ('+medals.length+')</span></summary><div class="shelf">'+shelf+'</div>'
    +(recent.length?'<div class="rec"><b style="font-size:13px">Mais recentes</b>'+recent.map(m=>'<div>'+medal(m.k,m.tier)+'<span>'+fd(m.date)+' · '+KINDS.find(x=>x.k===m.k).t+(m.tier!=='base'?' ('+TIER[m.tier].n+')':'')+'</span></div>').join('')+'</div>':'')
    +'</details></div>';
   const sec = document.createElement('section'); sec.id='s-trofeus'; sec.innerHTML = html;
-  const anchor = document.getElementById('s-sessao'); anchor.parentNode.insertBefore(sec, anchor);
+  document.getElementById('pg-trofeus').appendChild(sec);
   window.TROFEUS = {medals, pts, level:lv.n, streaks:ST};
 })();
