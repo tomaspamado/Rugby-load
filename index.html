@@ -86,6 +86,7 @@ h2{font-size:22px;font-weight:600;letter-spacing:0;text-transform:none}
   <div class="pg" id="pg-corpo">
 <section id="s-corpo"><h2>Composição corporal</h2><div class="sub">Pregas, peso e massa magra. Volta aqui depois de cada medição.</div><div class="card" id="bodycard"></div></section>
   </div>
+  <div class="pg" id="pg-trofeus"></div>
   <div class="pg" id="pg-mais">
 <section><h2>Todas as sessões</h2><div class="sub">Toca numa linha para ver a nota.</div>
     <div class="card" style="padding:6px 8px">
@@ -98,17 +99,24 @@ h2{font-size:22px;font-weight:600;letter-spacing:0;text-transform:none}
     <div><b>Aceleração:</b> arranque acima de 2,5 m/s².</div>
     <div><b>Média dos Backs:</b> média da tua linha (Backs) na mesma sessão.</div>
     <div><b>Dia pesado:</b> mais de ~3500 m. Os jogos têm sempre recuperação completa e carb-up.</div>
+    <div><b>Non 23:</b> jogadores fora dos 23 convocados para o jogo; os teus treinos nesse dia comparam-se com esse grupo.</div>
+    <div><b>3/4:</b> os três-quartos, ou seja, os backs da equipa de jogo (tudo menos avançados e scrum-halves).</div>
+    <div><b>Σ8:</b> soma de 8 pregas de gordura (mm). Quanto mais baixo, menos gordura; meta abaixo de 78 mm.</div>
+    <div><b>LMI:</b> índice de massa magra: quanto músculo tens para a tua altura. Referência do grupo: 54,8 ± 4,0.</div>
+    <div><b>ISAK:</b> protocolo internacional de medição das pregas e perímetros.</div>
+    <div><b>Carga vs. habitual:</b> a tua corrida dos últimos 7 dias dividida pela média semanal das últimas 4 semanas. Entre 0,8 e 1,3 é a zona segura.</div>
     <div><b>~</b> valor aproximado (lido de um gráfico do relatório).</div>
   </section>
   <footer class="foot"><span>Portugal Rugby · Performance Department</span><span>Controlo de carga · GPS</span></footer>
 
   </div>
 </div>
-<nav class="tabbar" id="tabbar" aria-label="Navegação"><button type="button" data-p="hoje" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>Hoje</span></button><button type="button" data-p="semana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8 14h3M13 14h3M8 17h3"/></svg><span>Semana</span></button><button type="button" data-p="evol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/></svg><span>Evolução</span></button><button type="button" data-p="jogos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/><path d="M12 14v4M8 20h8"/></svg><span>Jogos</span></button><button type="button" data-p="corpo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 8v6M7 10l5-1 5 1M9 21l3-7 3 7"/></svg><span>Corpo</span></button><button type="button" data-p="mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Mais</span></button></nav>
+<nav class="tabbar" id="tabbar" aria-label="Navegação"><button type="button" data-p="hoje" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>Hoje</span></button><button type="button" data-p="semana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8 14h3M13 14h3M8 17h3"/></svg><span>Semana</span></button><button type="button" data-p="evol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/></svg><span>Evolução</span></button><button type="button" data-p="jogos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/><path d="M12 14v4M8 20h8"/></svg><span>Jogos</span></button><button type="button" data-p="corpo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 8v6M7 10l5-1 5 1M9 21l3-7 3 7"/></svg><span>Corpo</span></button><button type="button" data-p="trofeus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="6"/><path d="M8.5 3l2.2 5M15.5 3l-2.2 5"/><path d="M12 11.5v5M10.3 13l1.7-1.5"/></svg><span>Troféus</span></button><button type="button" data-p="mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Mais</span></button></nav>
 
 <script src="data.js"></script>
 <script src="app.js"></script>
 <script src="body.js"></script>
+<script src="ajustes.js"></script>
 <script src="trofeus.js"></script>
 <script src="hoje.js"></script>
 <script src="paginas.js"></script>
