@@ -26,7 +26,7 @@
   const pills = L.map((el,i)=>{ const k=(el.className.match(/s-(\w+)/)||[])[1]||'info', b=el.querySelector('b'); return '<span class="pl"><i style="background:'+dot[k]+'"></i>'+(pre[i]?pre[i]+': ':'')+(b?b.textContent:'')+'</span>'; }).join('');
 
   const pos = ratio==null?0:Math.max(0,Math.min(100,ratio/1.5*100));
-  const wkSp = Math.max(...SESSIONS.filter(x=>x.week===s.week).map(x=>x.maxSpeed)), goal = MAXREF*0.95, cw = wkTot(s.week);
+  const wkSp = Math.max(...SESSIONS.filter(x=>x.week===s.week).map(x=>x.maxSpeed)), goal = MAXREF*spdPct(), cw = wkTot(s.week);
   const T = window.TROFEUS || {level:'-',pts:0,medals:[]};
   const fresh = T.medals.filter(m=>m.date===s.date).length;
   const stat = (v,u,l)=>'<div><b>'+v+(u?'<em>'+u+'</em>':'')+'</b><small>'+l+'</small></div>';
