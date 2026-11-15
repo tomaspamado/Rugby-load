@@ -63,7 +63,33 @@
     recovery:[ 'O corpo adapta-se no descanso, não na carga. Um método de cada vez, escolhido pelo tipo de dia.', 'Your body adapts during rest, not load. One method at a time, chosen by the type of day.' ],
     mental:[ 'O cérebro treina com o que imagina como treina com o que faz. Uma tarefa curta por dia, escolhida pelo tipo de dia.', 'The brain trains on what it vividly imagines almost like what it does. One short task a day, chosen by the type of day.' ]
   };
-  const TARGET = {p:3, r:2, m:5};
+  // Skills técnicas: [id, nome PT, nome EN, duração, como PT, como EN]
+  const SK = {
+    box:[
+      ['tech','Técnica a parado','Standing technique','10 min','Bola de lado, pé de apoio ao lado da bola, contacto no terço inferior, acompanhamento em direção ao alvo. 3 × 8, sem pressão, só a repetir o movimento certo.','Ball held side-on, plant foot beside the ball, contact on the lower third, follow through toward the target. 3 × 8, no pressure, just grooving the right movement.'],
+      ['hang','Altura e tempo de suspensão','Height and hang time','12 min','10 pontapés a apontar a uma zona. Conta o tempo de suspensão: o alvo é 4 s ou mais. Regista o melhor e tenta batê-lo.','10 kicks aiming at a zone. Time the hang: the target is 4 s or more. Note the best one and try to beat it.'],
+      ['zone','Alvos por zona','Zone targets','15 min','Três cones dentro dos 22 e junto à linha lateral. 10 pontapés, conta quantos caem na zona. Muda de zona a cada 5.','Three cones inside the 22 and near the touchline. 10 kicks, count how many land in the zone. Change zone every 5.'],
+      ['release','Tempo de libertação sob pressão','Release time under pressure','12 min','Bola no chão, recolhe, dois passos e chuta. Alguém cronometra: o pontapé sai em menos de 1,2 s. 8 repetições, com um defesa a avançar se tiveres ajuda.','Ball on the ground, pick up, two steps and kick. Have someone time it: the kick leaves in under 1.2 s. 8 reps, with a defender rushing if you have help.'],
+      ['weak','Pé fraco','Weak foot','10 min','3 × 8 com o pé fraco, só técnica e altura. É a opção que os defesas não esperam.','3 × 8 with your weak foot, technique and height only. It is the option defenders do not expect.']
+    ],
+    pass:[
+      ['spin','Passe de rotação','Spin pass','12 min','20 passes para cada lado, alvo à altura do peito a 8 m. Mãos atrás da bola, acompanha com os dedos em direção ao alvo.','20 passes each side, chest-height target at 8 m. Hands behind the ball, finish with fingers pointing at the target.'],
+      ['dive','Passe com mergulho','Dive pass','12 min','Bola no chão, mergulha e passa sem dar passos extra. 3 × 8 para cada lado. A bola sai cedo e baixa.','Ball on the ground, dive and pass without extra steps. 3 × 8 each side. The ball leaves early and low.'],
+      ['dist','Precisão a 8, 12 e 15 m','Accuracy at 8, 12 and 15 m','15 min','10 passes a cada distância para um alvo (peito de um colega ou aro). Conta os acertos e tenta chegar a 8 em 10.','10 passes at each distance at a target (a teammate\'s chest or a hoop). Count hits and aim for 8 out of 10.'],
+      ['speed','Velocidade de libertação','Release speed','10 min','Do chão à bola largada em menos de 0,6 s. 3 × 6, cronometrado. A velocidade vem de apanhar e passar num só movimento.','From the ground to the ball leaving in under 0.6 s. 3 × 6, timed. Speed comes from picking up and passing in one movement.'],
+      ['weakp','Lado fraco','Weak side','10 min','Todos os passes com a mão e o lado menos fortes. 3 × 10. O objetivo é igualar o alcance e a precisão.','All passes with your weaker hand and side. 3 × 10. The goal is to match range and accuracy.']
+    ],
+    def:[
+      ['tackle','Técnica de placagem','Tackle technique','12 min','Cabeça ao lado, ombro no alvo, braços fechados, pernas a empurrar. Em saco, 3 × 6 por cada ombro, a baixa velocidade.','Head to the side, shoulder on target, arms wrapped, legs driving. On a bag, 3 × 6 per shoulder, at low speed.'],
+      ['line','Velocidade da linha','Line speed','12 min','Blitz de 10 m com a linha: sai todo ao mesmo tempo, mantém a linha reta, passos curtos no fim. 6 repetições com 40 s de pausa.','10 m blitz with the line: go all together, keep the line straight, short steps at the end. 6 reps with 40 s rest.'],
+      ['cover','Cobertura de fundo','Back-field cover','12 min','Lê o pontapé, recua e posiciona-te atrás da linha. 8 repetições a chamar a tua posição em voz alta.','Read the kick, drop back and set behind the line. 8 reps calling your position out loud.'],
+      ['reload','Levantar e voltar à linha','Get up and rejoin the line','10 min','Depois de placar ou de ficares no chão, levanta e volta à linha em menos de 3 s. 8 repetições. Os 9 são a linha de reposição.','After a tackle or going to ground, get up and rejoin the line in under 3 s. 8 reps. Nines are the reload line.'],
+      ['ruckd','Defesa junto ao ruck','Defence around the ruck','12 min','Defende a franja do ruck: lê o 9 adversário, fecha o lado curto e empurra para o interior. 6 repetições com um colega a fazer de 9.','Defend the fringe of the ruck: read the opposing nine, shut the short side and push them inside. 6 reps with a teammate playing nine.']
+    ]
+  };
+  const SKN = {box:['Box kick','Box kick','🦵'], pass:['Passe','Passing','🏉'], def:['Defesa','Defence','🛡️']};
+  const KIND = {p:'prehab', r:'recovery', m:'mental', box:'box', pass:'pass', def:'def'};
+  const TARGET = {p:3, r:2, m:5, box:2, pass:3, def:2};
 
   // ---------- estado ----------
   const load = (k, d) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v==null ? d : v; }catch(e){ return d; } };
@@ -72,7 +98,8 @@
   const commit = () => { save('coach_log', LOG); save('coach_plank', PLANK); };
   let tab = 'prehab', ctxOverride = null, todayOverride = null;
   const todayKey = () => todayOverride || iso(new Date());
-  const day = k => (LOG[k] = LOG[k] || {p:{done:[], swap:0}, r:{done:false, swap:0}, m:{done:false, swap:0, rating:0, note:''}});
+  const day = k => { const d = (LOG[k] = LOG[k] || {}); d.p = d.p || {done:[], swap:0}; d.r = d.r || {done:false, swap:0}; d.m = d.m || {done:false, swap:0, rating:0, note:''};
+    ['box','pass','def'].forEach(s => { d[s] = d[s] || {done:false}; }); return d; };
 
   // ---------- contexto vindo da carga real ----------
   function context(){
@@ -96,8 +123,8 @@
   // ---------- escolha do dia (o que foi feito há mais tempo, sem repetir) ----------
   function lastDone(kind, ids, t){
     const m = {}; ids.forEach(i => m[i] = -1e9);
-    Object.keys(LOG).forEach(k => { if(k>=t) return; const d = LOG[k]; if(!d) return;
-      const list = kind==='p' ? (d.p && d.p.done || []) : kind==='r' ? (d.r && d.r.done && d.r.id ? [d.r.id] : []) : (d.m && d.m.done && d.m.id ? [d.m.id] : []);
+    Object.keys(LOG).forEach(k => { if(k>=t) return; const d = LOG[k]; if(!d || !d[kind]) return;
+      const list = kind==='p' ? (d.p.done || []) : (d[kind].done && d[kind].id ? [d[kind].id] : []);
       list.forEach(i => { if(i in m) m[i] = Math.max(m[i], parse(k).getTime()/DAYMS); }); });
     return m;
   }
@@ -106,32 +133,41 @@
     const m = lastDone(kind, pool.map(x=>x[0]), t), off = doy(t);
     return pool.map((x,i) => ({x, i})).sort((a,b) => (m[a.x[0]]-m[b.x[0]]) || (((a.i+off)%pool.length)-((b.i+off)%pool.length))).map(o => o.x);
   }
+  // listas completas por tipo (podes escolher qualquer uma) e quais são as recomendadas hoje
+  const ALL = {p:PRE.filter(x=>x[0]!=='hollow'||true), r:REC, m:MEN, box:SK.box, pass:SK.pass, def:SK.def};
+  function recommended(kind, k){
+    const easy = k!=='normal';
+    if(kind==='p') return PRE.filter(x => !(easy && x[6]));
+    if(kind==='r') return REC.filter(x => x[6].split(',').includes(k));
+    if(kind==='m'){ const pil = {same:['rot','foc'], next:['adv','self'], high:['foc','rot'], normal:Object.keys(P)}[k]; return MEN.filter(x => pil.includes(x[1])); }
+    return SK[kind];
+  }
   function plan(ctx){
-    const t = todayKey(), d = day(t), k = ctx.k, easy = k!=='normal';
-    const prePool = PRE.filter(x => !(easy && x[6]));
-    const preList = ranked('p', prePool, t);
-    const pre = preList[d.p.swap % preList.length];
-    const recPool = REC.filter(x => x[6].split(',').includes(k));
-    const recList = ranked('r', recPool, t);
-    const rec = recList[d.r.swap % recList.length];
-    const pil = {same:['rot','foc'], next:['adv','self'], high:['foc','rot'], normal:Object.keys(P)}[k];
-    const menPool = MEN.filter(x => pil.includes(x[1]));
-    const menList = ranked('m', menPool, t);
-    const men = menList[d.m.swap % menList.length];
-    d.p.id = pre[0]; d.r.id = rec[0]; d.m.id = men[0];
-    return {pre, rec, men, d, t};
+    const t = todayKey(), d = day(t), k = ctx.k, out = {d, t, opts:{}};
+    Object.keys(KIND).forEach(kind => {
+      const rec = recommended(kind, k), recList = ranked(kind, rec, t), recIds = recList.map(x=>x[0]);
+      const rest = ranked(kind, ALL[kind].filter(x => !recIds.includes(x[0])), t);
+      const list = recList.concat(rest), lastMap = lastDone(kind, list.map(x=>x[0]), t);
+      const rec0 = recList[0], chosen = d[kind].chosen && list.find(x => x[0]===d[kind].id);
+      const pick = chosen || rec0;
+      d[kind].id = pick[0];
+      out[kind] = pick;
+      out.opts[kind] = list.map(x => ({x, sug: x===rec0, rec: recIds.includes(x[0]), ago: lastMap[x[0]] < -1e8 ? null : Math.round(parse(t)/DAYMS - lastMap[x[0]])}));
+    });
+    out.pre = out.p; out.rec = out.r; out.men = out.m;
+    return out;
   }
 
-  // ---------- estatísticas ----------
+    // ---------- estatísticas ----------
   const mondayOf = s => { const d = parse(s), w = (d.getDay()+6)%7; d.setDate(d.getDate()-w); return iso(d); };
   const addDays = (s,n) => { const d = parse(s); d.setDate(d.getDate()+n); return iso(d); };
   const preDone = d => !!(d && d.p && d.p.done && d.p.id && d.p.done.includes(d.p.id) && d.p.done.includes('plank'));
-  const dayAny = d => !!(d && (preDone(d) || (d.r && d.r.done) || (d.m && d.m.done)));
+  const dayAny = d => !!(d && (preDone(d) || (d.r && d.r.done) || (d.m && d.m.done) || ['box','pass','def'].some(s => d[s] && d[s].done)));
   function weekStats(mon){
-    let p=0, r=0, m=0;
-    for(let i=0;i<7;i++){ const d = LOG[addDays(mon,i)]; if(!d) continue; if(preDone(d)) p++; if(d.r && d.r.done) r++; if(d.m && d.m.done) m++; }
+    let p=0, r=0, m=0, box=0, pass=0, def=0;
+    for(let i=0;i<7;i++){ const d = LOG[addDays(mon,i)]; if(!d) continue; if(preDone(d)) p++; if(d.r && d.r.done) r++; if(d.m && d.m.done) m++; if(d.box&&d.box.done) box++; if(d.pass&&d.pass.done) pass++; if(d.def&&d.def.done) def++; }
     let rd=0; SESSIONS.forEach(s => { if(s.date>=mon && s.date<=addDays(mon,6)) rd += s.rd||0; });
-    return {p, r, m, rd};
+    return {p, r, m, box, pass, def, rd};
   }
   function streak(){
     let n = 0, t = todayKey(); if(!dayAny(LOG[t])) t = addDays(t,-1);
@@ -171,6 +207,10 @@
    +'#pg-coach .cnt{border-left:3px solid #D9981A;padding:2px 0 2px 10px;font-size:14px;line-height:1.4}#pg-coach .cnt small{display:block;color:var(--ink-muted);font-size:12px}'
    +'#pg-coach .cpan{animation:ux-rise .26s cubic-bezier(.2,.8,.2,1) backwards;display:flex;flex-direction:column;gap:12px}'
    +'#pg-coach .cchk.pop{animation:ux-pop .4s cubic-bezier(.2,.8,.2,1)}'
+   +'#pg-coach .cpick{border:1px solid var(--line);border-radius:12px;overflow:hidden}#pg-coach .cpick>summary{flex-direction:row;list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-weight:700;font-size:15px}#pg-coach .cpick>summary::-webkit-details-marker{display:none}#pg-coach .cpick>summary::after{content:"▾";color:var(--ink-muted)}#pg-coach .cpick[open]>summary::after{content:"▴"}'
+   +'#pg-coach .plist{display:flex;flex-direction:column;border-top:1px solid var(--line);max-height:340px;overflow:auto}#pg-coach .plist button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;min-height:52px;padding:8px 14px;border:0;border-bottom:1px solid var(--line);background:var(--surface,#fff);color:var(--ink);font:600 15px Inter,sans-serif;cursor:pointer}#pg-coach .plist button:last-child{border-bottom:0}'
+   +'#pg-coach .plist button small{font-weight:500;color:var(--ink-muted);font-size:12px}#pg-coach .plist button.sel{background:rgba(217,152,26,.14)!important;color:var(--ink)!important;border-color:var(--line)!important}#pg-coach .plist button.off{opacity:.62}'
+   +'#pg-coach .cseg.w7{grid-template-columns:repeat(4,1fr)}#pg-coach .cnote{margin:0;font-size:13px;line-height:1.45;color:#8a5d06;background:rgba(217,152,26,.12);border-radius:10px;padding:8px 12px}'
    +'.more-link{display:flex;align-items:center;justify-content:space-between;width:100%}';
   document.body.appendChild(css);
 
@@ -181,45 +221,68 @@
     return '<div class="crow"><button type="button" class="cchk" role="checkbox" data-act="tick" data-k="'+kind+'" data-id="'+id+'" aria-checked="'+done+'" aria-label="'+esc(name)+': '+T('feito','done')+'">'+CHECK+'</button>'
       +'<details><summary><b>'+esc(name)+'</b><small>'+dur+(extra?' · '+extra:'')+'</small></summary><p>'+esc(how)+'</p></details></div>';
   }
-  const weekWord = n => n+(EN?'':'×');
+  function picker(kind, pl, ctx){
+    const ago = n => n==null ? T('nunca feito','never done') : n<=0 ? T('feito hoje','done today') : n===1 ? T('feito ontem','done yesterday') : T('feito há '+n+' dias','done '+n+' days ago');
+    const cur = pl[kind][0];
+    const rows = pl.opts[kind].map(o => {
+      const nm = kind==='m' ? T(o.x[3],o.x[4]) : T(o.x[1],o.x[2]);
+      const tag = o.sug ? T('sugerido hoje','suggested today') : (!o.rec && (kind==='p'||kind==='r'||kind==='m') ? T('menos indicado hoje','less suited today') : '');
+      return '<button type="button" data-act="pick" data-k="'+kind+'" data-id="'+o.x[0]+'" class="'+(o.x[0]===cur?'sel':'')+(tag===T('menos indicado hoje','less suited today')?' off':'')+'"><span>'+(o.x[0]===cur?'✓ ':'')+esc(nm)+'</span><small>'+[tag, ago(o.ago)].filter(Boolean).join(' · ')+'</small></button>'; }).join('');
+    return '<details class="cpick"><summary>'+T('Escolher exercício','Choose exercise')+'</summary><div class="plist">'+rows+'</div></details>';
+  }
+  const weekPill = (n, tg) => '<span class="pill">'+T('Esta semana: ','This week: ')+n+T(' de ',' of ')+tg+'</span>';
+  const doneBtn = (kind, done, lab, labDone) => '<button type="button" class="cb '+(done?'ok':'pri')+'" data-act="all" data-k="'+kind+'" style="width:100%">'+(done?T('Feito ✓','Done ✓'):lab)+'</button>';
   function panelPrehab(pl, ctx, ws){
     const {pre, d} = pl, sec = PLANK.sec, plDone = d.p.done.includes('plank'), preD = d.p.done.includes(pre[0]);
     const both = preD && plDone;
-    return '<div class="cpan"><div class="cc"><span class="pill">'+T('Esta semana: ','This week: ')+ws.p+T(' de ',' of ')+TARGET.p+'</span><h3>'+T('Prehab de hoje','Today\'s prehab')+'</h3><p class="w">'+L(WHY.prehab,0)+'</p>'
-      +item('p', pre[0], T(pre[1],pre[2]), pre[3], T(pre[4],pre[5]), preD, ctx.k==='normal'?'':T('versão leve','light option'))
+    return '<div class="cpan"><div class="cc">'+weekPill(ws.p, TARGET.p)+'<h3>'+T('Prehab de hoje','Today\'s prehab')+'</h3><p class="w">'+L(WHY.prehab,0)+'</p>'
+      +picker('p', pl, ctx)
+      +item('p', pre[0], T(pre[1],pre[2]), pre[3], T(pre[4],pre[5]), preD, ctx.k!=='normal'&&pre[6]?T('intenso para hoje','intense for today'):'')
       +item('p', 'plank', T('Prancha progressiva','Progressive plank'), '4 min', T('3 séries de '+sec+' s, corpo em linha, sem a lombar cair. Quando fizeres as 3 séries bem, sobe 5 s.','3 sets of '+sec+' s, body in a straight line, lower back not sagging. When all 3 sets are clean, add 5 s.'), plDone)
       +'<div class="cpl"><span>'+T('Prancha de hoje','Today\'s plank')+' <b>'+sec+' s</b></span><div><button type="button" data-act="plank" data-v="-5" aria-label="'+T('menos 5 s','minus 5 s')+'">−</button><button type="button" data-act="plank" data-v="5" aria-label="'+T('mais 5 s','plus 5 s')+'">+</button></div></div>'
-      +'<div class="cr2"><button type="button" class="cb" data-act="swap" data-k="p">'+T('Trocar exercício','Swap exercise')+'</button><button type="button" class="cb '+(both?'ok':'pri')+'" data-act="all" data-k="p">'+(both?T('Feito ✓','Done ✓'):T('Marcar tudo','Mark all'))+'</button></div></div></div>';
+      +doneBtn('p', both, T('Marcar tudo','Mark all'))+'</div></div>';
   }
   function panelRecovery(pl, ctx, ws){
     const {rec, d} = pl;
-    return '<div class="cpan"><div class="cc"><span class="pill">'+T('Esta semana: ','This week: ')+ws.r+T(' de ',' of ')+TARGET.r+'</span><h3>'+T('Recuperação de hoje','Today\'s recovery')+'</h3><p class="w">'+L(WHY.recovery,0)+'</p>'
+    return '<div class="cpan"><div class="cc">'+weekPill(ws.r, TARGET.r)+'<h3>'+T('Recuperação de hoje','Today\'s recovery')+'</h3><p class="w">'+L(WHY.recovery,0)+'</p>'
+      +picker('r', pl, ctx)
       +item('r', rec[0], T(rec[1],rec[2]), rec[3], T(rec[4],rec[5]), d.r.done, '')
-      +'<div class="cr2"><button type="button" class="cb" data-act="swap" data-k="r">'+T('Outra opção','Other option')+'</button><button type="button" class="cb '+(d.r.done?'ok':'pri')+'" data-act="all" data-k="r">'+(d.r.done?T('Feito ✓','Done ✓'):T('Marcar feito','Mark done'))+'</button></div>'
+      +doneBtn('r', d.r.done, T('Marcar feito','Mark done'))
       +'<p class="w">'+(ctx.k==='same'||ctx.k==='next'?T('Hidratos de carbono e proteína nas 2 h a seguir, e dorme 8 h ou mais.','Carbs and protein within 2 h, and sleep 8 h or more.'):T('Dormir 8 h ou mais é a parte inegociável da recuperação.','Sleeping 8 h or more is the non-negotiable part of recovery.'))+'</p></div></div>';
+  }
+  function panelSkill(kind, pl, ctx, ws){
+    const x = pl[kind], d = pl.d, n = SKN[kind];
+    const warn = ctx.k==='same' ? T('Dia de jogo ou pesado: se treinares a técnica, faz leve e com pouco volume.','Match or heavy day: if you work on technique, keep it light and low volume.')
+      : ctx.k==='next' ? T('Dia seguinte a jogo ou dia pesado: só técnica leve, sem pressão nem velocidade máxima.','Day after a match or heavy day: light technique only, no pressure or top speed.')
+      : ctx.k==='high' ? T('Carga alta esta semana: mantém o volume curto.','High load this week: keep the volume short.') : '';
+    return '<div class="cpan"><div class="cc">'+weekPill(ws[kind], TARGET[kind])+'<h3>'+n[2]+' '+T(n[0],n[1])+'</h3>'+(warn?'<p class="cnote">'+warn+'</p>':'')
+      +picker(kind, pl, ctx)
+      +item(kind, x[0], T(x[1],x[2]), x[3], T(x[4],x[5]), d[kind].done, '')
+      +doneBtn(kind, d[kind].done, T('Marcar feito','Mark done'))+'</div></div>';
   }
   function panelMental(pl, ctx, ws){
     const {men, d} = pl, m = d.m, p = P[men[1]];
     const rate = [1,2,3,4,5].map(n => '<button type="button" data-act="rate" data-v="'+n+'" aria-pressed="'+(m.rating===n)+'" aria-label="'+n+' / 5">'+n+'</button>').join('');
-    return '<div class="cpan"><div class="cc"><span class="pill">'+T('Esta semana: ','This week: ')+ws.m+T(' de ',' of ')+TARGET.m+'</span><h3>'+p[2]+' '+T(men[3],men[4])+'</h3><p class="w">'+L(p,0)+' · '+men[2]+'</p>'
+    return '<div class="cpan"><div class="cc">'+weekPill(ws.m, TARGET.m)+'<h3>'+p[2]+' '+T(men[3],men[4])+'</h3><p class="w">'+L(p,0)+' · '+men[2]+'</p>'
+      +picker('m', pl, ctx)
       +'<p style="margin:0;font-size:15px;line-height:1.55">'+esc(T(men[5],men[6]))+'</p>'
       +'<div><small class="sub">'+T('Como correu? (opcional)','How did it go? (optional)')+'</small></div><div class="crate">'+rate+'</div>'
       +'<textarea id="cnote" placeholder="'+T('Uma nota para ti, se quiseres…','A note to yourself, if you like…')+'" aria-label="'+T('Nota','Note')+'">'+esc(m.note)+'</textarea>'
-      +'<div class="cr2"><button type="button" class="cb" data-act="swap" data-k="m">'+T('Outra tarefa','Other task')+'</button><button type="button" class="cb '+(m.done?'ok':'pri')+'" data-act="all" data-k="m">'+(m.done?T('Feito ✓','Done ✓'):T('Concluir','Complete'))+'</button></div></div></div>';
+      +doneBtn('m', m.done, T('Concluir','Complete'))+'</div></div>';
   }
   function panelProgress(ctx, ws){
     const t = todayKey(), mon = mondayOf(t), s = streak();
     const bar = (lbl, v, tg) => '<div class="cmod"><span>'+lbl+'</span><div class="cbar"><i data-w="'+Math.min(100,Math.round(v/tg*100))+'"></i></div><span>'+v+'/'+tg+'</span></div>';
     let rows = '';
     for(let i=0;i<8;i++){ const m0 = addDays(mon,-7*i), w = weekStats(m0);
-      rows += '<div class="cwk"><span>'+fmt(m0)+'</span><div class="dots"><span>🛠️ '+w.p+'</span><span>🔄 '+w.r+'</span><span>🧘 '+w.m+'</span></div><small>'+(w.rd?km(w.rd)+' km':'–')+'</small></div>'; }
+      rows += '<div class="cwk"><span>'+fmt(m0)+'</span><div class="dots"><span>🛠️ '+w.p+'</span><span>🔄 '+w.r+'</span><span>🧘 '+w.m+'</span><span>🏉 '+(w.box+w.pass+w.def)+'</span></div><small>'+(w.rd?km(w.rd)+' km':'–')+'</small></div>'; }
     const rated = Object.keys(LOG).filter(k => LOG[k].m && LOG[k].m.done && LOG[k].m.rating && k > addDays(t,-14));
     const avg = rated.length ? rated.reduce((a,k)=>a+LOG[k].m.rating,0)/rated.length : null;
     const notes = Object.keys(LOG).sort().reverse().filter(k => LOG[k].m && LOG[k].m.note && LOG[k].m.note.trim()).slice(0,3)
       .map(k => '<div class="cnt">'+esc(LOG[k].m.note.trim())+'<small>'+fmt(k)+'</small></div>').join('');
-    let total = 0; Object.keys(LOG).forEach(k => { const d = LOG[k]; if(preDone(d)) total++; if(d.r&&d.r.done) total++; if(d.m&&d.m.done) total++; });
+    let total = 0; Object.keys(LOG).forEach(k => { const d = LOG[k]; if(preDone(d)) total++; if(d.r&&d.r.done) total++; if(d.m&&d.m.done) total++; ['box','pass','def'].forEach(s => { if(d[s]&&d[s].done) total++; }); });
     return '<div class="cpan"><div class="cst"><div><b>'+s+'</b><small>'+(s===1?T('dia seguido','day in a row'):T('dias seguidos','days in a row'))+'</small></div><div><b>'+total+'</b><small>'+T('sessões feitas','sessions done')+'</small></div><div><b>'+(avg==null?'–':num1(avg))+'</b><small>'+T('mental, média 14 d','mental, 14-day avg')+'</small></div></div>'
-      +'<div class="cc"><h3>'+T('Esta semana','This week')+'</h3>'+bar('🛠️ Prehab', ws.p, TARGET.p)+bar('🔄 '+T('Recup.','Recov.'), ws.r, TARGET.r)+bar('🧘 Mental', ws.m, TARGET.m)+'</div>'
+      +'<div class="cc"><h3>'+T('Esta semana','This week')+'</h3>'+bar('🛠️ Prehab', ws.p, TARGET.p)+bar('🔄 '+T('Recup.','Recov.'), ws.r, TARGET.r)+bar('🧘 Mental', ws.m, TARGET.m)+bar('🦵 Box kick', ws.box, TARGET.box)+bar('🏉 '+T('Passe','Passing'), ws.pass, TARGET.pass)+bar('🛡️ '+T('Defesa','Defence'), ws.def, TARGET.def)+'</div>'
       +'<div class="cc"><h3>'+T('8 semanas, com a tua carga','8 weeks, with your load')+'</h3><p class="w">'+T('Para ver se a prevenção acompanha as semanas pesadas.','To check that prevention keeps up with heavy weeks.')+'</p>'+rows+'</div>'
       +(notes?'<div class="cc"><h3>'+T('As tuas notas','Your notes')+'</h3>'+notes+'</div>':'')+'</div>';
   }
@@ -232,8 +295,8 @@
     const lr = ctx.ratio==null ? '' : ' · '+T('carga vs. habitual ','load vs usual ')+num1(ctx.ratio);
     let html = '<section class="ch"><h2>Coach</h2><div class="sub">'+T('Prehab, recuperação, mental e progresso, ajustados à tua carga.','Prehab, recovery, mental and progress, adjusted to your load.')+'</div>'
       +'<div class="cx" style="border-left:6px solid '+c.c+'"><small>'+T('Última sessão ','Last session ')+esc(ctx.lastTxt)+lr+'</small><div class="ct">'+L(c.t,0)+'</div><p>'+L(c.s,0)+'</p><div class="cs">'+chip('p','Prehab')+chip('r',T('Recuperação','Recovery'))+chip('m','Mental')+'</div></div>'
-      +'<div class="cseg" role="group" aria-label="Coach">'+[['prehab','Prehab'],['recovery',T('Recuperação','Recovery')],['mental','Mental'],['progress',T('Progresso','Progress')]].map(a=>'<button type="button" data-tab="'+a[0]+'" aria-pressed="'+(tab===a[0])+'">'+a[1]+'</button>').join('')+'</div>'
-      +'<div id="cpanel">'+(tab==='prehab'?panelPrehab(pl,ctx,ws):tab==='recovery'?panelRecovery(pl,ctx,ws):tab==='mental'?panelMental(pl,ctx,ws):panelProgress(ctx,ws))+'</div></section>';
+      +'<div class="cseg w7" role="group" aria-label="Coach">'+[['prehab','Prehab'],['recovery',T('Recuperação','Recovery')],['mental','Mental'],['box','Box kick'],['pass',T('Passe','Passing')],['def',T('Defesa','Defence')],['progress',T('Progresso','Progress')]].map(a=>'<button type="button" data-tab="'+a[0]+'" aria-pressed="'+(tab===a[0])+'">'+a[1]+'</button>').join('')+'</div>'
+      +'<div id="cpanel">'+(tab==='prehab'?panelPrehab(pl,ctx,ws):tab==='recovery'?panelRecovery(pl,ctx,ws):tab==='mental'?panelMental(pl,ctx,ws):tab==='progress'?panelProgress(ctx,ws):panelSkill(tab,pl,ctx,ws))+'</div></section>';
     pg.innerHTML = html;
     requestAnimationFrame(() => requestAnimationFrame(() => pg.querySelectorAll('.cbar i').forEach(i => { i.style.width = i.dataset.w+'%'; })));
     commit();
@@ -247,15 +310,19 @@
     if(act==='tick'){
       const id = b.dataset.id;
       if(k==='p'){ const i = d.p.done.indexOf(id); if(i<0) d.p.done.push(id); else d.p.done.splice(i,1); }
-      else if(k==='r') d.r.done = !d.r.done;
+      else d[k].done = !d[k].done;
       commit(); render(); const nb = pg.querySelector('.cchk[data-id="'+id+'"]'); if(nb && nb.getAttribute('aria-checked')==='true' && !reduce()) nb.classList.add('pop');
     } else if(act==='all'){
       if(k==='p'){ const need = [d.p.id,'plank']; const all = need.every(x => d.p.done.includes(x)); d.p.done = all ? [] : need.slice(); }
-      else if(k==='r') d.r.done = !d.r.done;
+      else if(k!=='m') d[k].done = !d[k].done;
       else { d.m.note = (pg.querySelector('#cnote')||{}).value || d.m.note; d.m.done = !d.m.done; }
       commit(); render();
-    } else if(act==='swap'){ d[k].swap++; if(k==='m'){ d.m.rating = 0; d.m.done = false; } commit(); render(); }
-    else if(act==='plank'){ PLANK.sec = Math.max(20, Math.min(240, PLANK.sec + (+b.dataset.v))); commit(); render(); }
+    } else if(act==='pick'){
+      const id = b.dataset.id;
+      if(k==='p'){ d.p.done = d.p.done.filter(x => x==='plank'); }
+      else { d[k].done = false; if(k==='m'){ d.m.rating = 0; } }
+      d[k].id = id; d[k].chosen = true; commit(); render();
+    } else if(act==='plank'){ PLANK.sec = Math.max(20, Math.min(240, PLANK.sec + (+b.dataset.v))); commit(); render(); }
     else if(act==='rate'){ const v = +b.dataset.v; d.m.rating = d.m.rating===v ? 0 : v; d.m.note = (pg.querySelector('#cnote')||{}).value || d.m.note; commit(); render(); }
   });
   pg.addEventListener('input', e => { if(e.target.id==='cnote'){ day(todayKey()).m.note = e.target.value; commit(); } });
