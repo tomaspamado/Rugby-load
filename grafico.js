@@ -122,7 +122,7 @@
           : {type:'bar', label:m.n, data:src.map(s=>s[m.k]), backgroundColor:pick(src.map(typeCol)), borderRadius:{topLeft:6,topRight:6}, borderSkipped:'bottom', maxBarThickness:28, order:2}];
         if(!m.line) ds.push({type:'line', label:T('Média do grupo','Group average'), data:src.map(s=>grpAvg(s,m)), borderColor:'#fff', borderWidth:2, borderDash:[5,4], pointRadius:0, pointHoverRadius:0, spanGaps:true, order:1});
         else{ ds.push({type:'line', label:T('Máximo pessoal','Personal max'), data:src.map(()=>MAXREF), borderColor:'rgba(255,255,255,.6)', borderWidth:1.5, borderDash:[3,5], pointRadius:0, order:1});
-              ds.push({type:'line', label:T('Meta 95%','Goal 95%'), data:src.map(()=>MAXREF*0.95), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1}); }
+              ds.push({type:'line', label:T('Meta ','Goal ')+Math.round(spdPct()*100)+'%', data:src.map(()=>MAXREF*spdPct()), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1}); }
         ch = makeChart(canvas, {data:{labels:src.map(s=>dshort(s.date)), datasets:ds}, min:m.line?18:undefined}, ()=>sel, setSel);
         read();
       };
@@ -149,7 +149,7 @@
     const html = '<h2>'+m.n+'</h2><div class="sub2">'+T('Semana a semana, só até '+cutName+' para a comparação ser justa','Week by week, only up to '+cutName+' so the comparison is fair')+'</div>'
       +'<div class="gr" aria-live="polite"><small class="r1"></small><div class="gv"></div><div class="gd r3"></div><small class="r4"></small></div>'
       +'<div class="cbox"><canvas tabindex="0" role="img" aria-label="'+m.n+'"></canvas></div>'
-      +legend([['rgba(255,255,255,.55)',T('Semana','Week')],['#D9981A',T('Selecionada','Selected')]])
+      +legend([['rgba(255,255,255,.55)',T('Semana','Week')],['#D9981A',T('Selecionada','Selected')],['#5CC48A',T('Alvo','Target')]])
       +'<p class="gh">'+T('Toca e arrasta o dedo no gráfico para ver cada semana.','Touch and drag along the chart to see each week.')+'</p>';
     openSheet(card, m.n, html, root => {
       let sel = Math.max(0, pts.findIndex(p=>p.w===selWeek));
@@ -160,8 +160,10 @@
         gv.innerHTML = disp(p.v)+(unit?'<em>'+unit+'</em>':'');
         const x = q && !p.gap && !q.gap ? pct(p.v,q.v) : null;
         r3.innerHTML = x!=null ? dlt(x, m.k==='maxSpeed'?3:10)+' '+T('vs. semana anterior','vs. previous week') : '';
-        r4.textContent = (p.gap||(q&&q.gap)) ? T('Houve treinos sem GPS (Agronomia): total incompleto, não comparo.','Some training had no GPS (Agronomia): incomplete total, no comparison.')
-          : p.n+' '+(p.n===1?T('sessão','session'):T('sessões','sessions'));
+        const ts = window.TG ? TG.status(p.w, m.k==='maxSpeed'?'sp':m.k) : null;
+        const tgw = ts ? ' · '+T('Alvo ','Target ')+(m.k==='rd'?f1(ts.goal/1000)+' km':m.k==='maxSpeed'?f1(ts.goal)+' km/h':f0(ts.goal)+(m.u?' '+m.u:''))+': '+TG.ICON[ts.st]+' '+TG.WORD[ts.st] : '';
+        r4.textContent = (p.gap||(q&&q.gap)) ? T('Houve treinos sem GPS (Agronomia): total incompleto, não comparo.','Some training had no GPS (Agronomia): incomplete total, no comparison.')+tgw
+          : p.n+' '+(p.n===1?T('sessão','session'):T('sessões','sessions'))+tgw;
       };
       const setSel = i => { if(i===sel || !pts[i]) return; sel = i; read(); ch.update('none'); };
       const cols = pts.map(p => p.gap ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.5)');
@@ -169,7 +171,8 @@
       const ds = [m.k==='maxSpeed'
         ? {type:'line', label:m.n, data:pts.map(p=>yv(p.v)), borderColor:'#fff', backgroundColor:'#fff', borderWidth:2.5, pointRadius:4, pointBackgroundColor:pick, pointBorderColor:'#0E1A2E', pointBorderWidth:1.5, tension:.25, order:2}
         : {type:'bar', label:m.n, data:pts.map(p=>yv(p.v)), backgroundColor:pick, borderRadius:{topLeft:6,topRight:6}, borderSkipped:'bottom', maxBarThickness:34, order:2}];
-      if(m.k==='maxSpeed') ds.push({type:'line', label:T('Meta 95%','Goal 95%'), data:pts.map(()=>MAXREF*0.95), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1});
+      if(m.k==='maxSpeed') ds.push({type:'line', label:T('Meta ','Goal ')+Math.round(spdPct()*100)+'%', data:pts.map(()=>MAXREF*spdPct()), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1});
+      else if(window.TG) ds.push({type:'line', label:T('Alvo','Target'), data:pts.map(()=>yv(TG.load()[m.k==='accel'?'accel':m.k])), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1});
       const ch = makeChart(canvas, {data:{labels:pts.map(p=>T('S','W')+p.w), datasets:ds}, min:m.k==='maxSpeed'?18:undefined}, ()=>sel, setSel);
       read();
       canvas.addEventListener('keydown', e => { if(e.key==='ArrowLeft'){ e.preventDefault(); setSel(sel-1); } else if(e.key==='ArrowRight'){ e.preventDefault(); setSel(sel+1); } });
