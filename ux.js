@@ -25,7 +25,7 @@
    +'.gsheet #rv-cur{overflow:hidden}.gsheet #rv-cur::after{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.16),transparent);animation:ux-sheen .7s ease-out .6s 1 backwards;pointer-events:none}'
    // Botão "pílula": translúcido, cantos 14, 52 px de altura (fácil de acertar com o polegar). Em fundos escuros e claros.
    +'.gsheet .bk,.det .bk,.more-btn,.defs .tgbtns button{border:0;border-radius:14px;min-height:52px;padding:0 20px;font:700 15px Inter,system-ui,sans-serif;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}'
-   +'.gsheet .bk{background:rgba(255,255,255,.14);color:#fff;margin-bottom:6px}.det .bk{background:rgba(14,26,46,.08);color:var(--ink,#0E1A2E);margin-bottom:6px}'
+   +'.gsheet .bk,.det .bk{position:relative;min-height:36px;padding:0 14px;border-radius:12px;font-size:14px;margin-bottom:4px}.gsheet .bk::before,.det .bk::before{content:"";position:absolute;inset:-4px -6px}.gsheet .bk{background:rgba(255,255,255,.14);color:#fff}.det .bk{background:rgba(14,26,46,.08);color:var(--ink,#0E1A2E)}'
    +'.more-btn{background:rgba(14,26,46,.07);color:var(--ink,#0E1A2E)}.defs .tgbtns button{background:rgba(14,26,46,.07);color:var(--ink,#0E1A2E)}.defs .tgbtns button.pri{background:#0E1A2E;color:#fff}'
    +'@keyframes ux-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
    +'.gsheet .rv,.gsheet .lg,.mmenu button{animation:ux-rise .26s '+EASE+' backwards}'
