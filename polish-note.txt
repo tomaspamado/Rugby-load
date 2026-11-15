@@ -1,0 +1,1 @@
+Polish CSS block lives at the end of the inline <style> in index.html (marked /* polish (unslop) */).
