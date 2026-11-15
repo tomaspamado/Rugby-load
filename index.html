@@ -15,7 +15,23 @@
 .btiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.btiles div{background:var(--surface-2);border-radius:8px;padding:10px 12px;min-width:0}.btiles small{display:block;color:var(--ink-muted);font-size:12px}.btiles .num{font-size:26px;display:block}
 .bz{margin-top:16px}.bbar{position:relative;height:14px;border-radius:7px;margin:12px 0 4px;background:var(--surface-2)}.bbar.s8{background:linear-gradient(90deg,var(--good-bg) 0 65%,var(--warn-bg) 65% 84.2%,var(--bad-bg,#f5c6cb) 84.2%)}.bbar.lmi u{position:absolute;top:0;bottom:0;background:var(--good-bg);border-radius:7px}.bbar i{position:absolute;top:-5px;width:4px;height:24px;margin-left:-2px;border-radius:2px;background:var(--ink)}.bl span{position:absolute;font-size:11px;color:var(--ink-muted)}
 .bt{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;font-variant-numeric:tabular-nums}.bt th,.bt td{padding:7px 6px;text-align:left;border-bottom:1px solid var(--line)}.bt th{color:var(--ink-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}.bt td.v{text-align:right;font-weight:600}.pcp{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--good-bg)}.pcp.mid{background:var(--warn-bg)}.pcp.hi{background:var(--info-bg)}.bd{display:block}
-#pg-corpo .todo{margin-top:16px}</style>
+#pg-corpo .todo{margin-top:16px}
+/* polish (unslop): sentence case, lighter weights, accent only where it matters */
+h2{font-size:22px;font-weight:600;letter-spacing:0;text-transform:none}
+.tag,.mrow.mh,.goal b,.todo b,.log th,.pos th,.tcmp th,.bt th,#wkview th,.chip .t,.foot,.kpi small{text-transform:none;letter-spacing:0}
+.tag{font-weight:600;font-size:13px}
+.mrow.mh,.log th,.pos th,.tcmp th,.bt th,#wkview th,.chip .t,.goal b,.todo b{font-size:12px;font-weight:500}
+.verdict{text-transform:none;font-weight:600;font-size:26px;letter-spacing:0}
+.light b{text-transform:none;font-weight:600;letter-spacing:0;font-size:22px}
+.pill,.chip .pillr,.tbadge,.pillg,.jump button{text-transform:none;letter-spacing:0;font-weight:600}
+.pill{font-size:12px}.chip .pillr,.tbadge{font-size:11px}.pillg{font-size:14px}
+.dp .rl,.mh b{text-transform:none;letter-spacing:0;font-weight:600}
+.tabbar button{text-transform:none;letter-spacing:0;font-weight:500}
+.num,.game .big,.chip .big2,.tcmp td.v{font-weight:600}
+.hero h1{font-weight:700}.hero .hs,.hero .up{text-transform:none;letter-spacing:.02em;font-size:12px}
+.card{border-left:1px solid var(--line)}.card.game,.gch{border-left-color:var(--line)}.card.ld{border-left:5px solid var(--maroon)}
+.chip{border-left:1px solid var(--line)}.chip.dn{border-left:5px solid var(--warn)}.chip.up{border-left:5px solid var(--good)}
+</style>
 
 <div class="wrap">
   <div class="pg on" id="pg-hoje">
