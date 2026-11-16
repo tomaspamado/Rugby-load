@@ -1,0 +1,45 @@
+/* Estilos da Balança (balanca.js). Ficheiro à parte para não reenviar a folha principal inteira; carrega depois de style.css. */
+#s-balanca{margin-top:6px}
+#s-balanca .rsp .rt{font-size:34px}
+#s-balanca .seg{max-width:100%;flex-wrap:wrap;margin-bottom:6px}
+#s-balanca .rsp .g.bal-g{grid-template-columns:1fr;margin:8px 0 6px}
+#s-balanca .bal-w b{font-size:40px}
+#s-balanca .bal-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+#s-balanca .bal-hd>div{min-width:0}
+#s-balanca .bal-hd b{display:block;font-size:15px;font-weight:600;color:var(--ink)}
+#s-balanca .bal-hd small{display:block;font-size:12px;color:var(--ink-muted)}
+#s-balanca .bal-chg{flex:none;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
+#s-balanca .bal-chg:focus-visible{outline:2px solid #D9981A;outline-offset:2px}
+#s-balanca .wkleg i.bal-line.d,.gsheet .gl i.bal-line.d{background:repeating-linear-gradient(90deg,currentColor 0 6px,transparent 6px 10px)!important}
+.gsheet .gl i.bal-line{width:16px;height:3px;border-radius:2px;vertical-align:3px}
+.gsheet .gl i.bal-dot{border-radius:50%;background:rgba(255,255,255,.45)}
+.gsheet .gl i.bal-line:not(.d):not([style]){background:#5CC48A}
+.gsheet .gl i.bal-line.d{color:#8FB4E8}
+#s-balanca .wkleg i.bal-line.d{color:#2F6FD6}
+.gsheet .bal-join{display:flex;flex-direction:column;gap:4px;max-width:100%}
+.gsheet .bal-join small{font-size:12px;color:rgba(255,255,255,.7)}
+.gsheet .bal-vs{opacity:.5;font-size:28px}
+.gsheet .gr .gv em+.bal-vs{margin-left:6px}
+.gsheet .bal-pin{margin-top:14px;min-height:52px;width:100%;border:0;border-radius:14px;background:#fff;color:#0E1A2E;font:700 15px Inter,system-ui,sans-serif;cursor:pointer}
+.gsheet .bal-pin:disabled{background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);cursor:default}
+.gsheet .bal-pin:focus-visible{outline:2px solid #D9981A;outline-offset:2px}
+#s-balanca .wkleg i.bal-dot{border-radius:50%;background:rgba(14,26,46,.35)}
+#s-balanca .wkleg i.bal-line{height:3px;border-radius:2px;width:16px;vertical-align:3px;background:#16A34A}
+#s-balanca .bt td,#s-balanca .bt th{text-align:right;white-space:nowrap}
+#s-balanca .bt td:first-child,#s-balanca .bt th:first-child{text-align:left}
+/* iPhone: o campo de data tem largura própria e saía da coluna */
+#s-balanca .frm input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%;text-align:left;line-height:30px}
+#s-balanca .frm input[type=date]::-webkit-date-and-time-value{text-align:left}
+#s-balanca .frm .fr2>label{min-width:0;overflow:hidden}
+#s-balanca .tgbtns{display:flex;margin-top:4px}
+#s-balanca .tgbtns button{flex:1;min-height:52px;border:0;border-radius:14px;padding:0 20px;font:700 15px Inter,system-ui,sans-serif;cursor:pointer;background:#0E1A2E;color:#fff;transition:transform .16s cubic-bezier(.34,1.56,.64,1)}
+#s-balanca .tgbtns button:active{transform:scale(.96);transition-duration:.07s}
+#s-balanca .tgbtns button:focus-visible{outline:2px solid #D9981A;outline-offset:2px}
+#s-balanca .tgmsg{font-size:13px;font-weight:600;color:#1F5A2B;min-height:18px}
+#s-balanca .tgmsg.err{color:#7A5300}
+/* pedido da manhã (6h–10h, ainda sem pesagem de hoje) */
+#s-balanca .bal-am{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+#s-balanca .bal-am .rt{font-size:28px}
+#s-balanca .bal-am button{align-self:flex-start;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:transparent;color:rgba(255,255,255,.9);font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
+#s-balanca .bal-del{min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink-muted);font:600 13px Inter,system-ui,sans-serif;cursor:pointer}
+
