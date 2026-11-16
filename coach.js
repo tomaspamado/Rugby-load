@@ -296,6 +296,8 @@
     const lr = ctx.ratio==null ? '' : ' · '+T('carga vs. habitual ','load vs usual ')+num1(ctx.ratio);
     const TABS = [['prehab','Prehab'],['recovery',T('Recuperação','Recovery')],['mental','Mental'],['box','Box kick'],['pass',T('Passe','Passing')],['def',T('Defesa','Defence')],['progress',T('Progresso','Progress')]];
     const y = scrollY;
+    // mantém a altura enquanto redesenha: se a página encolhe por um instante, o iPhone perde o sítio da barra de baixo
+    if(pg.offsetHeight) pg.style.minHeight = pg.offsetHeight+'px';
     pg.innerHTML = '<section class="ch"><h2>Coach</h2><div class="sub">'+T('Prehab, recuperação, mental e progresso, ajustados à tua carga.','Prehab, recovery, mental and progress, adjusted to your load.')+'</div>'
       +'<div class="cday"><button type="button" data-act="dprev" aria-label="'+T('Dia anterior','Previous day')+'"'+(dayOff>=14?' disabled':'')+'>‹</button><b>'+(dayOff===0?T('Hoje','Today'):dayOff===1?T('Ontem','Yesterday'):'')+' '+fmt(pl.t)+'</b><button type="button" data-act="dnext" aria-label="'+T('Dia seguinte','Next day')+'"'+(dayOff===0?' disabled':'')+'>›</button></div>'
       +'<div class="cx"><small>'+T('Última sessão ','Last session ')+esc(ctx.lastTxt)+lr+'</small><div class="ct" style="color:'+DC[DAYTXT[ctx.k][0]]+'">'+T(DAYTXT[ctx.k][1],DAYTXT[ctx.k][2])+'</div><p>'+L(c[0],0)+'</p><div class="cs">'+chip('p','Prehab')+chip('r',T('Recuperação','Recovery'))+chip('m','Mental')+'</div></div>'
@@ -303,6 +305,7 @@
       +'<div id="cpanel">'+(tab==='prehab'?panelPrehab(pl,ctx,ws):tab==='recovery'?panelRecovery(pl,ctx,ws):tab==='mental'?panelMental(pl,ctx,ws):tab==='progress'?panelProgress(ctx,ws):panelSkill(tab,pl,ctx,ws))+'</div></section>';
     requestAnimationFrame(() => requestAnimationFrame(() => pg.querySelectorAll('.cbar i').forEach(i => { i.style.width = i.dataset.w+'%'; })));
     if(y && pg.classList.contains('on')) scrollTo(0, y);
+    requestAnimationFrame(() => { pg.style.minHeight = ''; if(window.UXFIX) UXFIX(); });
     commit();
   }
 
@@ -310,7 +313,7 @@
   const rd = id => (pg.querySelector(id)||{}).value || '';
   pg.addEventListener('toggle', e => { const k = e.target.dataset && e.target.dataset.pk; if(k) pickOpen[k] = e.target.open; }, true);
   pg.addEventListener('click', e => {
-    const tb = e.target.closest('[data-tab]'); if(tb){ tab = tb.dataset.tab; const y0 = scrollY; render(); const sg = pg.querySelector('.cseg'); const top = sg ? sg.getBoundingClientRect().top + scrollY - 8 : 0; scrollTo({top: y0 > top ? Math.max(0, top) : y0, behavior:'instant'}); return; }
+    const tb = e.target.closest('[data-tab]'); if(tb){ tab = tb.dataset.tab; const y0 = scrollY; render(); const sg = pg.querySelector('.cseg'); const top = sg ? sg.getBoundingClientRect().top + scrollY - 8 : 0; scrollTo({top: y0 > top ? Math.max(0, top) : y0, behavior:'instant'}); if(window.UXFIX) UXFIX(); return; }
     const b = e.target.closest('[data-act]'); if(!b) return;
     const t = todayKey(), d = day(t), act = b.dataset.act, k = b.dataset.k, id = b.dataset.id;
     const ensureSet = () => { const e2 = d[k]; if(!e2.set){ e2.ids = todayIds(d, k).slice(); e2.set = true; } return e2; };
