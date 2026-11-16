@@ -24,6 +24,8 @@ function meanRd(days, ref){
 
 // ---------- decisão do dia (uma só regra para o Hoje e o Coach) ----------
 const isoDay = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+// semana em curso: a do dia de hoje (segunda a domingo). À segunda às 00:00 começa a semana seguinte, mesmo sem sessões.
+const TODAY = isoDay(new Date()), CUR_WEEK = REG.isoWeek(TODAY);
 function dayPlan(t){
   t = t || isoDay(new Date());
   const past = SESSIONS.filter(x=>x.date<=t), s = past.length ? past[past.length-1] : last;
@@ -199,26 +201,29 @@ function dow(d){ const n = new Date(d).getUTCDay(); return n===0 ? 7 : n; }   //
 
 
 // ---------- week view (escolher a semana; semana atual só até ao dia atual) ----------
-let selWeek = last.week, wkChart = null;
+let selWeek = CUR_WEEK, wkChart = null;
 const DS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-function weekList(){ return [...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>b-a); }
-function weekCut(w){ return w===last.week ? dow(last.date) : 7; }
+function weekList(){ return [...new Set(SESSIONS.map(x=>x.week).concat(CUR_WEEK))].sort((a,b)=>b-a); }
+function weekCut(w){ return w===CUR_WEEK ? dow(TODAY) : 7; }
+function weekMon(){ const d = new Date(TODAY+'T00:00:00'); d.setDate(d.getDate()-dow(TODAY)+1); return isoDay(d); }
 function weekSessions(w){ const c=weekCut(w); return SESSIONS.filter(x=>x.week===w && dow(x.date)<=c); }
 function initWkPick(){
   const sel=document.getElementById('wkpick');
-  sel.innerHTML=weekList().map(w=>{const xs=SESSIONS.filter(x=>x.week===w), a=xs[0].date, b=xs[xs.length-1].date;
-    return '<option value="'+w+'">Semana '+w+' · '+dshort(a)+(a!==b?' – '+dshort(b):'')+(w===last.week?' · atual':'')+'</option>';}).join('');
+  sel.innerHTML=weekList().map(w=>{const xs=SESSIONS.filter(x=>x.week===w);
+    if(!xs.length) return '<option value="'+w+'">Semana '+w+' · desde '+dshort(weekMon())+' · atual</option>';
+    const a=xs[0].date, b=xs[xs.length-1].date;
+    return '<option value="'+w+'">Semana '+w+' · '+dshort(a)+(a!==b?' – '+dshort(b):'')+(w===CUR_WEEK?' · atual':'')+'</option>';}).join('');
   sel.value=String(selWeek);
   sel.addEventListener('change',()=>{selWeek=+sel.value; renderWeekView(); renderPos();});
 }
 function renderWeekView(){
   const el=document.getElementById('wkview'); if(!el) return;
   const w=selWeek, cut=weekCut(w), cur=wkTot(w,cut), cutName=DOWN[cut%7];
-  const xs=weekSessions(w), weeks=[...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b), pw=weeks[weeks.indexOf(w)-1], prv=pw?wkTot(pw,cut):null;
+  const xs=weekSessions(w), weeks=weekList().reverse(), pw=weeks[weeks.indexOf(w)-1], prv=pw?wkTot(pw,cut):null;
   const accT=ww=>SESSIONS.filter(x=>x.week===ww && dow(x.date)<=cut).reduce((a,x)=>a+x.accel,0);
-  let h='<div class="card"><span class="tag">Semana '+w+(w===last.week?' · até '+cutName:' · semana completa')+'</span>';
-  h+='<div class="sub" style="margin-top:8px">'+(w===last.week?'A semana atual só conta até à '+cutName+'. ':'')+(prv&&prv.n?'Comparada com a semana '+pw+', também só '+(cut<7?'de segunda a '+cutName.replace('-feira',''):'completa')+'.':'')+'</div>';
-  if(!cur){ h+='<div class="sub" style="margin-top:8px">Sem sessões com GPS neste período.</div></div>'; el.innerHTML=h; return; }
+  let h='<div class="card"><span class="tag">Semana '+w+(w===CUR_WEEK?' · até '+cutName:' · semana completa')+'</span>';
+  h+='<div class="sub" style="margin-top:8px">'+(w===CUR_WEEK?'A semana atual só conta até à '+cutName+'. ':'')+(prv&&prv.n?'Comparada com a semana '+pw+', também só '+(cut<7?'de segunda a '+cutName.replace('-feira',''):'completa')+'.':'')+'</div>';
+  if(!cur){ h+='<div class="sub" style="margin-top:8px">'+(w===CUR_WEEK?'Ainda sem sessões com GPS esta semana.':'Sem sessões com GPS neste período.')+'</div></div>'; el.innerHTML=h; if(wkChart){wkChart.destroy(); wkChart=null;} return; }
   const gap=SESSIONS.some(x=>x.gpsGap && (x.week===w || x.week===pw));
   const T=(n,v,pv,fmt,u)=>{ let d=''; if(prv&&prv.n&&!gap&&pv>0){const p=(v/pv-1)*100,c=Math.abs(p)<5?'info':(p>0?'good':'info'); d=' <span class="t-'+c+'" style="font-weight:600;font-size:13px">'+(p>=5?'▲':p<=-5?'▼':'●')+' '+(p>=0?'+':'')+Math.round(p)+'%</span><small>Semana '+pw+': '+fmt(pv)+u+'</small>';}
     return '<div><small>'+n+'</small><span class="num">'+fmt(v)+u+'</span>'+d+'</div>'; };
@@ -232,7 +237,7 @@ function renderWeekView(){
 }
 function drawWeekChart(){
   const cv=document.getElementById('cWd'); if(wkChart){wkChart.destroy(); wkChart=null;} if(!cv||!window.Chart) return;
-  const xs=weekSessions(selWeek), cut=weekCut(selWeek), days=[1,2,3,4,5,6,7].filter(d=>selWeek!==last.week||d<=cut);
+  const xs=weekSessions(selWeek), cut=weekCut(selWeek), days=[1,2,3,4,5,6,7].filter(d=>selWeek!==CUR_WEEK||d<=cut);
   const ink=css('--ink-muted'), grid=css('--line'), ms=css('--maroon-soft'), mc=css('--red'), gold=css('--gold'), inkc=css('--ink'), bgc=css('--bg');
   const by=d=>xs.filter(x=>dow(x.date)===d);
   const sum=(d,k)=>{const a=by(d); return a.length?a.reduce((t,x)=>t+x[k],0):null;};
@@ -301,7 +306,7 @@ function spark(vals,hi){
   return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><path d="'+d+'" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="'+a[0]+'" cy="'+a[1]+'" r="3" fill="#fff"/></svg>';
 }
 function renderKpis(){
-  const wp=document.getElementById('wkpill'); if(wp) wp.textContent='Semana '+last.week;
+  const wp=document.getElementById('wkpill'); if(wp) wp.textContent='Semana '+CUR_WEEK;
 }
 function renderPos(){
   const el=document.getElementById('pos'); if(!el) return;
@@ -381,7 +386,6 @@ function renderLoad(){
   const heavy=a7.filter(x=>x.rd>HEAVY).length, matches=a7.filter(x=>x.type==='Match').length;
   const goal=MAXREF*spdPct(), sp=SESSIONS.filter(x=>x.maxSpeed>=goal), lastSp=sp.length?sp[sp.length-1]:null;
   const dsp=lastSp?Math.round((end-new Date(lastSp.date+'T00:00:00').getTime())/DAY):null;
-  const wkSp=Math.max(...SESSIONS.filter(x=>x.week===last.week).map(x=>x.maxSpeed));
   const pos=ratio==null?0:Math.max(0,Math.min(100,ratio/1.5*100));
   const dd=Math.round((end-new Date(last.date+'T00:00:00').getTime())/DAY);
   el.innerHTML='<div><span class="tag">7 dias até '+dshort(last.date)+' vs. média semanal das últimas 4 semanas</span></div>'
