@@ -1,8 +1,7 @@
 // ---------- Alvos semanais: editáveis em Mais > Definições, com estado claro semana a semana ----------
 // Guardados no telemóvel (localStorage 'targets'). A velocidade é uma % do máximo pessoal (app.js lê o mesmo valor em spdPct()).
 (function(){
-  const EN = document.documentElement.lang === 'en';
-  const T = (pt,en) => EN ? en : pt;
+  const {en: EN, t: T} = I18N;
   const nfx = (v,d) => (EN ? v.toFixed(d) : v.toFixed(d).replace('.',','));
   const withSep = n => EN ? Math.round(n).toLocaleString('en-US') : Math.round(n).toLocaleString('pt-PT').replace(/\s/g,'.');
 
@@ -42,25 +41,7 @@
 
   window.TG = {load, status, weekVal, KEYS, WORD, ICON, DEF, goalKmh};
 
-  const css = document.createElement('style');
-  css.textContent = ''
-   // estado nos quadrados escuros da semana
-   +'.rsp .tg{display:block;margin-top:6px;font-size:12px;font-weight:600;opacity:1;line-height:1.3}.rsp .tg.ok{color:#5CC48A}.rsp .tg.miss{color:#F2B84B}.rsp .tg.open{color:#8FB4E8}.rsp .tg.na{color:rgba(255,255,255,.7)}'
-   +'.rsp .tgb{display:block;height:4px;border-radius:2px;background:rgba(255,255,255,.14);margin-top:5px;overflow:hidden}.rsp .tgb u{display:block;height:100%;border-radius:2px;background:#8FB4E8;text-decoration:none}.rsp .tgb.ok u{background:#5CC48A}.rsp .tgb.miss u{background:#F2B84B}.rsp .tgb.na u{background:rgba(255,255,255,.4)}'
-   +'.rsp .tgsum{display:block;margin-top:10px;font-size:13px;font-weight:600;opacity:1}.rsp .tgsum.ok{color:#5CC48A}.rsp .tgsum.miss{color:#F2B84B}'
-   // quadro semana a semana (superfície clara)
-   +'.tgt{width:100%;border-collapse:collapse;font-size:13px}.tgt th,.tgt td{padding:7px 4px;text-align:center;border-bottom:1px solid var(--line,#E3E7EC);white-space:nowrap}.tgt th{font-weight:600;font-size:12px;color:var(--ink-muted)}.tgt th:first-child,.tgt td:first-child{text-align:left}'
-   +'.tgt td.ok{color:#1F5A2B;font-weight:600}.tgt td.miss{color:#7A5300;font-weight:600}.tgt td.open{color:#2B4F8A;font-weight:600}.tgt td.na{color:var(--ink-muted)}.tgt tr.cur td:first-child{font-weight:700}.tgt small{display:block;font-weight:400;font-size:11px;color:var(--ink-muted)}'
-   +'.tgcap{font-size:12px;color:var(--ink-muted);margin-top:8px}'
-   // definições
-   +'.defs .tgrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line,#E3E7EC)}.defs .tgrow:last-of-type{border-bottom:0}'
-   +'.defs .tgrow label{font-weight:600;font-size:15px;min-width:0}.defs .tgrow .hint{grid-column:1/-1;font-size:12px;color:var(--ink-muted)}'
-   +'.defs .inp{display:inline-flex;align-items:center;gap:6px}.defs .inp input{width:92px;min-height:44px;box-sizing:border-box;font:inherit;font-size:16px;font-weight:600;text-align:right;padding:6px 10px;border:1px solid var(--line,#C9D0D9);border-radius:8px;background:var(--surface,#fff);color:var(--ink)}'
-   +'.defs .inp input:focus-visible{outline:2px solid #D9981A;outline-offset:1px}.defs .inp span{font-size:13px;color:var(--ink-muted);min-width:36px}'
-   +'.defs .tgbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}.defs .tgbtns button{font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 16px;border-radius:8px;cursor:pointer;border:1px solid var(--line,#C9D0D9);background:var(--surface,#fff);color:var(--ink)}'
-   +'.defs .tgbtns button.pri{background:#0E1A2E;color:#fff;border-color:#0E1A2E}.defs .tgbtns button:focus-visible{outline:2px solid #D9981A;outline-offset:2px}'
-   +'.defs .tgmsg{font-size:13px;font-weight:600;color:#1F5A2B;min-height:18px}.defs .tgmsg.err{color:#7A5300}.defs h3{font-size:16px;margin:14px 0 0}';
-  document.body.appendChild(css);
+  // estilos: em style.css (secção Alvos semanais e Definições)
 
   // ---------- Semana: estado em cada quadrado + resumo + quadro ----------
   const wk = document.getElementById('s-wk');
@@ -113,7 +94,7 @@
 
   // ---------- legenda do gráfico de velocidade no separador Evolução/Hoje (texto fixo do HTML) ----------
   const cs = document.getElementById('cSpd');
-  if(cs){ const p = cs.closest('.card') && cs.closest('.card').querySelector('p'); if(p){ const o = load(); p.textContent = T('km/h. Tracejado: máximo pessoal (~33,4). Linha verde: meta semanal de '+o.sp+'% ('+nfx(goalKmh(o),1)+').','km/h. Dashed: personal max (~33.4). Green line: weekly goal of '+o.sp+'% ('+nfx(goalKmh(o),1)+').'); } }
+  if(cs){ const p = cs.closest('.card') && cs.closest('.card').querySelector('p'); if(p){ const o = load(); p.textContent = T('km/h. Tracejado: máximo pessoal (~33,4). Linha verde: alvo semanal de '+o.sp+'% ('+nfx(goalKmh(o),1)+').','km/h. Dashed: personal max (~33.4). Green line: weekly target of '+o.sp+'% ('+nfx(goalKmh(o),1)+').'); } }
 
   // ---------- Mais > Definições (idioma + os meus alvos) ----------
   const mp = document.getElementById('pg-mais');
