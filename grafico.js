@@ -1,26 +1,12 @@
 // ---------- Gráfico em ponto grande: toca num quadrado e vê a série toda, a passar o dedo ----------
 // Evolução: a série sessão a sessão. Semana: o mesmo indicador semana a semana (mesmo dia da semana, comparação justa).
 (function(){
-  const EN = document.documentElement.lang === 'en';
-  const T = (pt,en) => EN ? en : pt;
+  const {en: EN, t: T} = I18N;
   const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const EASE = 'cubic-bezier(.2,.8,.2,1)';
   const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
-  const st = document.createElement('style');
-  st.textContent = ''
-   +'.gsheet{position:fixed;inset:0;z-index:60;background:var(--navy,#0E1A2E);color:#fff;overflow:auto;overscroll-behavior:contain;padding:max(14px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));box-sizing:border-box}'
-   +'.gsheet .dc{max-width:640px;margin:0 auto}.gsheet .bk{font:600 15px Inter,system-ui,sans-serif;background:none;border:0;color:#fff;min-height:44px;padding:0 12px 0 0;cursor:pointer;display:inline-flex;align-items:center}'
-   +'.gsheet h2{margin:4px 0 2px;font-size:26px}.gsheet .sub2{color:rgba(255,255,255,.7);font-size:14px;margin-bottom:12px}'
-   +'.gsheet .gr{background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:14px 16px;margin-bottom:14px;min-height:118px;box-sizing:border-box}.gsheet .gr small{display:block;font-size:12px;opacity:.78}'
-   +'.gsheet .gr .gv{font-family:"Barlow Condensed",sans-serif;font-size:46px;font-weight:600;line-height:1.05;margin:2px 0}.gsheet .gr .gv em{font-style:normal;font-size:16px;opacity:.75;margin-left:4px}'
-   +'.gsheet .gr .gd{font-size:13px;font-weight:600}.gsheet .gr .up{color:#5CC48A}.gsheet .gr .dn{color:#F2B84B}.gsheet .gr .nt{color:#8FB4E8}'
-   +'.gsheet .gflt{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin-bottom:10px}.gsheet .gflt .seg{max-width:100%;flex-wrap:wrap}'
-   +'.gsheet .cbox{position:relative;height:min(50vh,340px);touch-action:pan-y;-webkit-user-select:none;user-select:none}.gsheet .cbox canvas{touch-action:pan-y}'
-   +'.gsheet .gh{color:rgba(255,255,255,.6);font-size:13px;margin:10px 0 0}.gsheet .seg{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}.gsheet .seg button{background:transparent;color:#fff}.gsheet .seg button[aria-pressed=true]{background:#fff;color:#0E1A2E}.gsheet .bk:focus-visible,.gsheet canvas:focus-visible{outline:2px solid #D9981A;outline-offset:2px}'
-   +'.gsheet .gl{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:rgba(255,255,255,.7);margin-top:8px}.gsheet .gl i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}'
-   +'.rsp .g>div.gt{cursor:pointer;position:relative}.rsp .g>div.gt::after{content:"›";position:absolute;right:9px;top:6px;font-size:18px;line-height:1;opacity:.7}.rsp .g>div.gt:focus-visible{outline:2px solid #D9981A;outline-offset:2px}';
-  document.body.appendChild(st);
+  // estilos: em style.css (secção Gráfico grande (folha))
 
   let sheet = null;
   const vw = () => innerWidth, vh = () => innerHeight;
@@ -123,7 +109,7 @@
           : {type:'bar', label:m.n, data:src.map(s=>s[m.k]), backgroundColor:pick(src.map(typeCol)), borderRadius:{topLeft:6,topRight:6}, borderSkipped:'bottom', maxBarThickness:28, order:2}];
         if(!m.line) ds.push({type:'line', label:T('Média do grupo','Group average'), data:src.map(s=>grpAvg(s,m)), borderColor:'#fff', borderWidth:2, borderDash:[5,4], pointRadius:0, pointHoverRadius:0, spanGaps:true, order:1});
         else{ ds.push({type:'line', label:T('Máximo pessoal','Personal max'), data:src.map(()=>MAXREF), borderColor:'rgba(255,255,255,.6)', borderWidth:1.5, borderDash:[3,5], pointRadius:0, order:1});
-              ds.push({type:'line', label:T('Meta ','Goal ')+Math.round(spdPct()*100)+'%', data:src.map(()=>MAXREF*spdPct()), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1}); }
+              ds.push({type:'line', label:T('Alvo ','Target ')+Math.round(spdPct()*100)+'%', data:src.map(()=>MAXREF*spdPct()), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1}); }
         ch = makeChart(canvas, {data:{labels:src.map(s=>dshort(s.date)), datasets:ds}, min:m.line?18:undefined}, ()=>sel, setSel);
         read();
       };
@@ -172,7 +158,7 @@
       const ds = [m.k==='maxSpeed'
         ? {type:'line', label:m.n, data:pts.map(p=>yv(p.v)), borderColor:'#fff', backgroundColor:'#fff', borderWidth:2.5, pointRadius:4, pointBackgroundColor:pick, pointBorderColor:'#0E1A2E', pointBorderWidth:1.5, tension:.25, order:2}
         : {type:'bar', label:m.n, data:pts.map(p=>yv(p.v)), backgroundColor:pick, borderRadius:{topLeft:6,topRight:6}, borderSkipped:'bottom', maxBarThickness:34, order:2}];
-      if(m.k==='maxSpeed') ds.push({type:'line', label:T('Meta ','Goal ')+Math.round(spdPct()*100)+'%', data:pts.map(()=>MAXREF*spdPct()), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1});
+      if(m.k==='maxSpeed') ds.push({type:'line', label:T('Alvo ','Target ')+Math.round(spdPct()*100)+'%', data:pts.map(()=>MAXREF*spdPct()), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1});
       else if(window.TG) ds.push({type:'line', label:T('Alvo','Target'), data:pts.map(()=>yv(TG.load()[m.k==='accel'?'accel':m.k])), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1});
       const ch = makeChart(canvas, {data:{labels:pts.map(p=>T('S','W')+p.w), datasets:ds}, min:m.k==='maxSpeed'?18:undefined}, ()=>sel, setSel);
       read();

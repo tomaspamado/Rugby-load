@@ -1,7 +1,7 @@
 // ---------- Troféus: medalhas, séries e nível (calculados a partir das sessões da Seleção) ----------
 // Contam todas as sessões. Na Seleção compara-se com o grupo; nos Lusitanos, com a tua própria média. Semanas sem GPS (gpsGap) não quebram séries: são ignoradas.
 (function(){
-  const EN = document.documentElement.lang === 'en', T = (pt,en) => EN ? en : pt;
+  const {en: EN, t: T} = I18N;
   const SP = spdPct(), SPP = Math.round(SP*100);
   const TG0 = (()=>{ const d = {rd:9500, hsr:2500, accel:160}; try{ const o = JSON.parse(localStorage.getItem('targets')||'{}'); ['rd','hsr','accel'].forEach(k=>{ const v = +o[k]; if(v>0) d[k] = v; }); }catch(e){} return d; })();
   const TIER = {gold:{n:'Ouro',c:'#C99A1E'}, silver:{n:'Prata',c:'#8D98A8'}, bronze:{n:'Bronze',c:'#A8693A'}, base:{n:'',c:'#1F3B63'}};
@@ -15,11 +15,11 @@
   ICON.full = '<circle cx="12" cy="12" r="5.5" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M12 9v3.4l2.2 1.4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>';
   ICON.pace = '<path d="M7 8l4 4-4 4M12 8l4 4-4 4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>';
   const KINDS = [
-    {k:'speed', t:'Meta de velocidade', d:T('Chegar a '+SPP+'% do teu máximo ('+(MAXREF*SP).toFixed(1).replace('.',',')+' km/h) numa semana: é o alvo que defines nas Definições. Prata: 2 pontos percentuais acima. Ouro: novo recorde da época.','Reach '+SPP+'% of your max ('+(MAXREF*SP).toFixed(1)+' km/h) in a week: the target you set in Settings. Silver: 2 percentage points above. Gold: a new season record.'), pts:{bronze:3,silver:5,gold:8}},
+    {k:'speed', t:T('Alvo de velocidade','Speed target'), d:T('Chegar a '+SPP+'% do teu máximo ('+(MAXREF*SP).toFixed(1).replace('.',',')+' km/h) numa semana: é o alvo que defines nas Definições. Prata: 2 pontos percentuais acima. Ouro: novo recorde da época.','Reach '+SPP+'% of your max ('+(MAXREF*SP).toFixed(1)+' km/h) in a week: the target you set in Settings. Silver: 2 percentage points above. Gold: a new season record.'), pts:{bronze:3,silver:5,gold:8}},
     {k:'targets', t:T('Alvos da semana','Weekly targets'), d:T('Semana fechada com os alvos de distância, corrida rápida, acelerações e velocidade cumpridos. Prata: 3 de 4. Ouro: 4 de 4. Semanas sem GPS completo não contam.','A closed week with the distance, fast running, accelerations and speed targets met. Silver: 3 of 4. Gold: 4 of 4. Weeks with incomplete GPS do not count.'), pts:{silver:3,gold:6}},
     {k:'four',  t:'Quatro de quatro', d:'Numa sessão, acima em distância, corrida rápida, acelerações e velocidade. Na Seleção, contra a média do grupo; nos Lusitanos, contra a tua própria média.', pts:{base:2}},
     {k:'nine',  t:'Número 1 dos 9', d:'Primeiro entre os scrum-halves em pelo menos 3 das 4 métricas da semana.', pts:{base:5}},
-    {k:'load',  t:'Carga certa', d:'Semana fechada com a carga entre 0,8 e 1,3 do teu habitual (a zona segura).', pts:{base:2}},
+    {k:'load',  t:T('Zona segura','Safe zone'), d:T('Semana fechada com a carga vs. habitual entre 0,8 e 1,3.','A closed week with load vs. usual between 0.8 and 1.3.'), pts:{base:2}},
     {k:'full',  t:T('Jogo completo','Full match'), d:T('Jogar 80 minutos ou mais num jogo.','Play 80 minutes or more in a match.'), pts:{base:3}},
     {k:'pace',  t:T('Ritmo de jogo','Match pace'), d:T('Num jogo, mais metros por minuto e mais corrida rápida por minuto do que a tua média dos jogos anteriores. Precisa de 2 jogos anteriores e de 30 minutos em campo.','In a match, more metres per minute and more fast running per minute than your average of previous matches. Needs 2 earlier matches and 30 minutes on the pitch.'), pts:{base:3}}
   ];
@@ -53,12 +53,12 @@
         if(pv.length>=3){ const m=k=>pv.reduce((a,x)=>a+x[k],0)/pv.length; if(s.rd>m('rd') && s.hsr>m('hsr') && s.accel>m('accel') && s.maxSpeed>m('maxSpeed')) add('four','base',s.date,w,'Acima da tua média nas 4 métricas'); }
       } });
     // Número 1 dos 9 (semana, só onde há relatório semanal)
-    const P = w===45 ? POSWK : w===46 ? POSWK46 : null;
+    const P = posWeek(w);
     if(P){ const me=P.rows.find(r=>r.me), shs=P.rows.filter(r=>r.sh&&!r.me); const wins=['rd','hsr','acc','sp'].filter(k=>shs.every(r=>me[k]>r[k])).length; if(wins>=3) add('nine','base',xs[xs.length-1].date,w,'#1 dos 9 em '+wins+' de 4'); }
     // Alvos da semana (semana fechada, com GPS completo)
     if(!gap && (w<last.week || dow(xs[xs.length-1].date)>=6)){ const t = wkTot(w), acc = xs.reduce((a,x)=>a+x.accel,0), hit = [t.rd>=TG0.rd, t.hsr>=TG0.hsr, acc>=TG0.accel, t.sp>=MAXREF*SP].filter(Boolean).length; if(hit>=3) add('targets', hit===4?'gold':'silver', xs[xs.length-1].date, w, T(hit+' de 4 alvos cumpridos',hit+' of 4 targets met')); }
     // Carga certa (semana fechada)
-    if(!gap && (w<last.week || dow(xs[xs.length-1].date)>=6)){ const lastS = xs[xs.length-1], n28 = SESSIONS.filter(x=>x.date<=lastS.date && (new Date(lastS.date)-new Date(x.date))/86400000<28).length, r = meanRd(7,lastS)/meanRd(28,lastS); if(n28>=6) if(r>=0.8 && r<=1.3) add('load','base',lastS.date,w,'Rácio '+r.toFixed(2).replace('.',',')); }
+    if(!gap && (w<last.week || dow(xs[xs.length-1].date)>=6)){ const lastS = xs[xs.length-1], n28 = SESSIONS.filter(x=>x.date<=lastS.date && (new Date(lastS.date)-new Date(x.date))/86400000<28).length, r = meanRd(7,lastS)/meanRd(28,lastS); if(n28>=6) if(r>=0.8 && r<=1.3) add('load','base',lastS.date,w,T('Carga vs. habitual ','Load vs. usual ')+r.toFixed(2).replace('.',EN?'.':',')); }
   });
 
   // jogos: jogo completo e ritmo de jogo (contra a tua própria média dos jogos anteriores)
@@ -69,10 +69,42 @@
     if(pv.length>=2 && s.fieldTimeMin>=30){ const a = k=>pv.reduce((t,x)=>t+x[k]/x.fieldTimeMin,0)/pv.length; if(s.rd/s.fieldTimeMin>a('rd') && s.hsr/s.fieldTimeMin>a('hsr')) add('pace','base',s.date,s.week,Math.round(s.rd/s.fieldTimeMin)+' m/min · '+(s.hsr/s.fieldTimeMin).toFixed(1).replace('.',',')+' m/min '+T('rápidos','fast')); }
   });
 
+  // Coach: semanas com o prehab, o mental e as skills cumpridos, e cada novo peso na prancha (lê o que o Coach guarda no telemóvel)
+  const CL = (()=>{ try{ return JSON.parse(localStorage.getItem('coach_log'))||{}; }catch(e){ return {}; } })();
+  const CT = Object.assign({p:3, r:2, m:4, box:2, pass:4, def:2}, (()=>{ try{ return JSON.parse(localStorage.getItem('coach_target'))||{}; }catch(e){ return {}; } })());
+  const cDone = (e,k) => !!e && (e.min>0 || (k==='p' ? (e.done||[]).includes('plank') : (e.done||[]).length>0));
+  const isoOf = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  const cdays = Object.keys(CL).sort();
+  if(cdays.length){
+    const mon = d => { const x = new Date(d+'T00:00:00'); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; };
+    for(let m = mon(cdays[0]); m <= today0; m.setDate(m.getDate()+7)){
+      const ds = [...Array(7)].map((_,i)=>{ const x = new Date(m); x.setDate(x.getDate()+i); return isoOf(x); });
+      const end = ds[6], closed = new Date(end+'T00:00:00') < today0, cnt = k => ds.filter(d=>cDone(CL[d]&&CL[d][k],k)).length;
+      const lastDay = ds.filter(d=>CL[d]).pop() || end, wn = REG ? REG.isoWeek(ds[0]) : 0;
+      if(CT.p>0 && cnt('p')>=CT.p) add('cprehab','base',lastDay,wn,cnt('p')+T(' dias de prehab',' prehab days'));
+      if(CT.m>0 && cnt('m')>=CT.m) add('cmental','base',lastDay,wn,cnt('m')+T(' dias de mental',' mental days'));
+      const sk = ['box','pass','def'].filter(k=>CT[k]>0), hit = sk.filter(k=>cnt(k)>=CT[k]).length;
+      if(closed && sk.length && hit===sk.length) add('cskills','base',lastDay,wn,T('Box kick, passe e defesa','Box kick, passing and defence'));
+    }
+    let top = 0; cdays.forEach(d => { const pk = CL[d].p && CL[d].p.plank; if(pk && pk.kg>top){ if(top>0 || pk.kg>0) add('cplank','base',d,REG?REG.isoWeek(d):0,pk.kg+' kg'); top = pk.kg; } });
+  }
+  KINDS.push(
+    {k:'cprehab', t:T('Semana de prehab','Prehab week'), d:T('Cumprir o teu alvo de dias de prehab numa semana (Coach).','Hit your weekly prehab target (Coach).'), pts:{base:2}},
+    {k:'cmental', t:T('Cabeça no sítio','Mind on it'), d:T('Cumprir o teu alvo de dias de mental numa semana (Coach).','Hit your weekly mental target (Coach).'), pts:{base:2}},
+    {k:'cskills', t:T('Skills em dia','Skills on track'), d:T('Semana fechada com box kick, passe e defesa no alvo (Coach).','A closed week with box kick, passing and defence on target (Coach).'), pts:{base:3}},
+    {k:'cplank', t:T('Prancha mais pesada','Heavier plank'), d:T('Registar a prancha com um peso novo (Coach).','Log the plank with a new weight (Coach).'), pts:{base:2}});
+  ICON.cprehab = '<path d="M8 16l8-8M9.5 7.5l7 7M6.5 10.5l7 7" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>';
+  ICON.cmental = '<circle cx="12" cy="12" r="5.5" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M9.5 12h5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>';
+  ICON.cskills = '<ellipse cx="12" cy="12" rx="6.5" ry="4.2" transform="rotate(-35 12 12)" fill="none" stroke="#fff" stroke-width="1.8"/>';
+  ICON.cplank = '<path d="M6 14h12M8 10v8M16 10v8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>';
+  const okWc = [...new Set(medals.filter(m=>m.k==='cprehab').map(m=>m.week))];
+
   // séries (semanas seguidas); semanas com gpsGap são ignoradas
   const okW = weeks.filter(w=>!sel.some(s=>s.week===w&&s.gpsGap));
   const streak = k=>{ const has=new Set(medals.filter(m=>m.k===k).map(m=>m.week)); let cur=0,best=0,run=0; okW.forEach(w=>{ if(has.has(w)){run++;best=Math.max(best,run);}else run=0; }); for(let i=okW.length-1;i>=0&&has.has(okW[i]);i--) cur++; return {cur,best}; };
   const ST = {speed:streak('speed'), load:streak('load'), nine:streak('nine'), targets:streak('targets')};
+  ST.prehab = (()=>{ let cur=0; const m0 = new Date(today0); m0.setDate(m0.getDate()-((m0.getDay()+6)%7)); const has = new Set(okWc); let w = REG?REG.isoWeek(isoOf(m0)):0; if(!has.has(w)) w--; while(has.has(w)){ cur++; w--; } return {cur, best:cur}; })();
 
   const pts = medals.reduce((a,m)=>a+(KINDS.find(x=>x.k===m.k).pts[m.tier]||0),0);
   let li = 0; LEVELS.forEach((l,i)=>{ if(pts>=l.min) li=i; });
@@ -83,24 +115,20 @@
   const medal = (k,tier,locked)=>'<svg class="mdl'+(locked?' lk':'')+'" viewBox="0 0 24 28" aria-hidden="true"><g fill="'+(locked?'#cfd6df':'#C8102E')+'"><path d="M6.5 0h4.2l3.6 10.5H10.2z"/><path d="M17.5 0h-4.2L9.7 10.5h4.1z"/></g><circle cx="12" cy="18" r="8.5" fill="'+(locked?'#dde3ea':TIER[tier||'base'].c)+'"/>'+(locked?'':'<ellipse cx="8.6" cy="13" rx="3.6" ry="1.9" fill="#fff" opacity=".2" transform="rotate(-30 8.6 13)"/><g transform="translate(0,6)">'+ICON[k]+'</g>')+'</svg>';
   const fd = d=>dshort(d);
 
-  const css = document.createElement('style');
-  css.textContent = '.tro .lvl{background:var(--navy,#0E1A2E);color:#fff;border-radius:12px;padding:14px 16px}.tro .lvl small{opacity:.75;font-size:12px}.tro .lvl b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:32px;font-weight:700;line-height:1.1}.tro .lbar{height:8px;border-radius:4px;background:rgba(255,255,255,.2);margin-top:10px;overflow:hidden}.tro .lbar i{display:block;height:100%;background:#D9981A;border-radius:4px}.tro .lvl span{display:block;font-size:12px;opacity:.8;margin-top:6px}'
-   +'.tro .sk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.tro .sk div{background:var(--surface-2);border-radius:8px;padding:10px;min-width:0}.tro .sk b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:26px;font-weight:600;line-height:1}.tro .sk small{display:block;font-size:12px;color:var(--ink-muted);margin-top:4px}'
-   +'.tro .shelf{display:grid;gap:10px;margin-top:12px}.tro .md{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}.tro .md:first-child{border-top:0}.tro .mdl{width:40px;height:47px;display:block}.tro .md b{font-size:15px;font-weight:600}.tro .md p{margin:2px 0 0;font-size:13px;color:var(--ink-muted)}.tro .md .n{font-size:12px;margin-top:4px;color:var(--ink)}.tro .md.lk b,.tro .md.lk .n{color:var(--ink-muted)}.tro .tg{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--surface-2);margin-left:6px;vertical-align:middle}.tro .tg.new{background:#D9981A;color:#0E1A2E}#s-trofeus .lvl{cursor:pointer;position:relative}#s-trofeus .lvl::after{content:"›";position:absolute;right:14px;top:12px;font-size:22px;opacity:.7}#s-trofeus .lvl:focus-visible{outline:2px solid #D9981A;outline-offset:2px}.gsheet .road{display:grid;gap:0;position:relative}.gsheet .lg{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);margin:16px 0 4px 4px}.gsheet .lg i{width:10px;height:10px;border-radius:3px}.mdl,.emb{filter:drop-shadow(0 1px 1.5px rgba(14,26,46,.25))}.gsheet .rv{display:grid;grid-template-columns:48px 1fr;gap:14px;align-items:center;padding:12px 14px;border-radius:14px;position:relative}.gsheet .rv+.rv::before{content:"";position:absolute;left:37px;top:-14px;height:26px;width:3px;background:rgba(255,255,255,.18)}.gsheet .rv.done+.rv::before,.gsheet .rv.cur::before{background:#D9981A}.gsheet .rv .emb{width:44px;height:50px;display:block}.gsheet .rv b{font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:600;display:block;line-height:1.1}.gsheet .rv small{display:block;font-size:13px;opacity:.78;margin-top:2px}.gsheet .rv.lock{opacity:.55}.gsheet .rv.cur{background:rgba(217,152,26,.16);box-shadow:inset 0 0 0 1.5px #D9981A}.gsheet .rv .lbar{height:8px;border-radius:4px;background:rgba(255,255,255,.2);margin-top:8px;overflow:hidden}.gsheet .rv .lbar i{display:block;height:100%;background:#D9981A;border-radius:4px}.tro .rec{margin-top:12px}.tro .rec div{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}.tro .rec .mdl{width:22px;height:26px;flex:none}';
-  document.head.appendChild(css);
+  // estilos: em style.css (secção Troféus)
 
   const latest = SESSIONS[SESSIONS.length-1].date;
   const recent = medals.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
   const shelf = KINDS.map(K=>{
     const ms = medals.filter(m=>m.k===K.k), top = ms.length ? ms.reduce((a,m)=>(['base','bronze','silver','gold'].indexOf(m.tier)>['base','bronze','silver','gold'].indexOf(a.tier)?m:a),ms[0]) : null;
     const isNew = ms.some(m=>m.date===latest);
-    return '<div class="md'+(ms.length?'':' lk')+'">'+medal(K.k,top?top.tier:null,!ms.length)+'<div><b>'+K.t+'</b>'+(isNew?'<span class="tg new">Novo</span>':'')+(ms.length?'<span class="tg">'+ms.length+'×'+(top.tier!=='base'?' · '+TIER[top.tier].n:'')+'</span>':'')+'<p>'+K.d+'</p>'+(ms.length?'<div class="n">'+(['targets','full','pace','four'].includes(K.k)?T('Última','Latest'):'Última')+': '+fd(ms[ms.length-1].date)+' · '+ms[ms.length-1].note+'</div>':'<div class="n">Ainda por conquistar</div>')+'</div></div>';
+    return '<div class="md'+(ms.length?'':' lk')+'" data-k="'+K.k+'">'+medal(K.k,top?top.tier:null,!ms.length)+'<div><b>'+K.t+'</b>'+(isNew?'<span class="tg new">'+T('Novo','New')+'</span>':'')+(ms.length?'<span class="tg">'+ms.length+'×'+(top.tier!=='base'?' · '+TIER[top.tier].n:'')+'</span>':'')+(ms.length?'<div class="n">'+T('Última','Latest')+': '+fd(ms[ms.length-1].date)+' · '+ms[ms.length-1].note+'</div>':'<div class="n">'+T('Ainda por conquistar','Not earned yet')+'</div>')+'<p hidden>'+K.d+'</p></div></div>';
   }).join('');
   const strk = (n,l,s)=>'<div><b>'+s.cur+'</b><small>'+l+(s.best>s.cur?' · '+T('melhor','best')+' '+s.best:'')+'</small></div>';
   const html = '<h2>Troféus</h2><div class="card tro">'
-   +'<div class="lvl" role="button" tabindex="0" aria-label="'+T('Ver todos os níveis','See all levels')+'"><small>O teu nível</small><b>'+lv.n+'</b><div class="lbar"><i style="width:'+(nx?Math.min(100,(pts-lv.min)/(nx.min-lv.min)*100):100).toFixed(0)+'%"></i></div><span>'+pts+' '+T('pontos','points')+(nx?' · '+T('faltam','need')+' '+(nx.min-pts)+' '+T('para','for')+' '+nx.n:' · '+T('nível máximo','max level'))+'</span></div>'
-   +'<div class="sk">'+strk(0,'semanas seguidas com a meta de velocidade',ST.speed)+strk(0,'semanas seguidas com a carga certa',ST.load)+strk(0,'semanas seguidas como nº 1 dos 9',ST.nine)+strk(0,T('semanas seguidas com 3 ou mais alvos','weeks in a row with 3+ targets'),ST.targets)+'</div>'
-   +'<div class="sub" style="margin-top:8px">Contam todas as sessões: na Seleção comparas com o grupo, nos Lusitanos contigo próprio. Semanas sem GPS não quebram as séries. Não há medalhas por correr mais: só pelo que interessa.</div>'
+   +'<div class="lvl" role="button" tabindex="0" aria-label="'+T('Ver todos os níveis','See all levels')+'"><small>'+T('O teu nível','Your level')+'</small><b>'+lv.n+'</b><div class="lbar"><i style="width:'+(nx?Math.min(100,(pts-lv.min)/(nx.min-lv.min)*100):100).toFixed(0)+'%"></i></div><span>'+pts+' '+T('pontos','points')+(nx?' · '+T('faltam','need')+' '+(nx.min-pts)+' '+T('para','for')+' '+nx.n:' · '+T('nível máximo','max level'))+'</span></div>'
+   +'<div class="sk">'+strk(0,T('semanas seguidas com o alvo de velocidade','weeks in a row with the speed target'),ST.speed)+strk(0,T('semanas seguidas na zona segura','weeks in a row in the safe zone'),ST.load)+strk(0,'semanas seguidas como nº 1 dos 9',ST.nine)+strk(0,T('semanas seguidas com 3 ou mais alvos','weeks in a row with 3+ targets'),ST.targets)+strk(0,T('semanas seguidas com o prehab cumprido','weeks in a row with prehab done'),ST.prehab)+'</div>'
+   +'<div class="sub" style="margin-top:8px">'+T('Toca numa medalha para ver a regra. ','Tap a medal to see the rule. ')+'Contam todas as sessões: na Seleção comparas com o grupo, nos Lusitanos contigo próprio. Semanas sem GPS não quebram as séries. Não há medalhas por correr mais: só pelo que interessa.</div>'
    +'<details class="fold" open><summary><span>Medalhas ('+medals.length+')</span></summary><div class="shelf">'+shelf+'</div>'
    +(recent.length?'<div class="rec"><b style="font-size:13px">Mais recentes</b>'+recent.map(m=>'<div>'+medal(m.k,m.tier)+'<span>'+fd(m.date)+' · '+KINDS.find(x=>x.k===m.k).t+(m.tier!=='base'?' ['+(EN?({Ouro:'Gold',Prata:'Silver',Bronze:'Bronze'}[TIER[m.tier].n]||TIER[m.tier].n):TIER[m.tier].n)+']':'')+'</span></div>').join('')+'</div>':'')
    +'</details></div>';
