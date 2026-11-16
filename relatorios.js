@@ -54,12 +54,12 @@ function posWeek(w){ if(w==null) return POSWEEKS[POSWEEKS.length-1]; return POSW
 
 // ---------- exigência da semana (critério do treinador) ----------
 // Percentil 50 (mediana) e percentil 75 (top 25%) dos outros jogadores do relatório semanal, em distância e corrida rápida.
-// Estar no P75 = pronto para as exigências; acima do P50 = perto. Semana sem relatório (a semana em curso e as seguintes)
-// usa o último relatório: a exigência que a equipa teve na semana anterior. Semanas antes do primeiro relatório: sem exigência (usa os alvos fixos).
+// Estar no P75 = pronto para as exigências; acima do P50 = perto. Compara-se sempre a mesma semana: os teus números da semana X
+// com os percentis da semana X. Semana sem relatório (ainda não saiu, ou antes do primeiro): sem percentis, usa os alvos fixos.
 function pctl(xs, p){ const s = xs.slice().sort((a,b)=>a-b), i = (s.length-1)*p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi]-s[lo])*(i-lo); }
 function demandOf(w){
-  let P = posWeek(w);
-  if(!P){ const last = POSWEEKS[POSWEEKS.length-1]; if(w <= last.week) return null; P = last; }
-  const o = P.rows.filter(r => !r.me), q = k => ({p50:pctl(o.map(r=>r[k]), .5), p75:pctl(o.map(r=>r[k]), .75)});
-  return {week:P.week, own:P.week===w, n:o.length, rd:q('rd'), hsr:q('hsr')};
+  const P = posWeek(w); if(!P) return null;
+  const o = P.rows.filter(r => !r.me), me = P.rows.find(r => r.me), q = k => ({p50:pctl(o.map(r=>r[k]), .5), p75:pctl(o.map(r=>r[k]), .75)});
+  // os teus números vêm do mesmo relatório (mesmas sessões que os dos outros), não do total da app
+  return {week:P.week, n:o.length, rd:q('rd'), hsr:q('hsr'), me: me ? {rd:me.rd, hsr:me.hsr} : null};
 }

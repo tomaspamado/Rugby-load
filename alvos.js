@@ -29,7 +29,7 @@
     const v = weekVal(w); if(!v) return null;
     tg = tg || load();
     const D = (k==='rd' || k==='hsr') ? demandOf(w) : null;
-    const val = k==='sp' ? v.sp : v[k], goal = D ? D[k].p75 : k==='sp' ? goalKmh(tg) : tg[k], p50 = D ? D[k].p50 : null;
+    const val = D && D.me ? D.me[k] : k==='sp' ? v.sp : v[k], goal = D ? D[k].p75 : k==='sp' ? goalKmh(tg) : tg[k], p50 = D ? D[k].p50 : null;
     const ok = val >= goal, mid = p50!=null && val >= p50;
     const st = ok ? 'ok' : v.gap ? 'na' : v.open ? 'open' : mid ? 'mid' : 'miss';
     return {st, val, goal, p50, mid, D, left:Math.max(0, goal-val), pct:Math.min(100, val/goal*100), gap:v.gap};
@@ -74,7 +74,8 @@
       g.insertAdjacentHTML('beforebegin', '<small class="tgsum '+cls+'">'+(all?'✓ ':'')+lbl+'</small>');
     }
     const D = demandOf(w);
-    if(D) g.insertAdjacentHTML('afterend', '<small class="tgsrc">'+T('Distância e corrida rápida: alvo = percentil 75 dos '+D.n+' backs do relatório da semana '+D.week+(D.own?'':' (a última semana da equipa)')+'. P75 = top 25%, pronto para as exigências; P50 = mediana.','Distance and fast running: target = 75th percentile of the '+D.n+' backs in the week '+D.week+' report'+(D.own?'':' (the team\'s latest week)')+'. P75 = top 25%, ready for the demands; P50 = median.')+'</small>');
+    g.insertAdjacentHTML('afterend', '<small class="tgsrc">'+(D ? T('Distância e corrida rápida: alvo = percentil 75 dos '+D.n+' backs nesta mesma semana (relatório da semana '+D.week+')'+(D.me?'; o estado usa os teus números do mesmo relatório ('+nfx(D.me.rd/1000,1)+' km, '+withSep(D.me.hsr)+' m)':'')+'. P75 = top 25%, pronto para as exigências; P50 = mediana.','Distance and fast running: target = 75th percentile of the '+D.n+' backs in this same week (week '+D.week+' report)'+(D.me?'; the status uses your numbers from the same report ('+nfx(D.me.rd/1000,1)+' km, '+withSep(D.me.hsr)+' m)':'')+'. P75 = top 25%, ready for the demands; P50 = median.')
+      : T('Sem relatório da equipa para a semana '+w+': distância e corrida rápida usam o alvo fixo. O P50 e o P75 desta semana aparecem quando o relatório for adicionado.','No team report for week '+w+': distance and fast running use the fixed target. This week\'s P50 and P75 appear once the report is added.'))+'</small>');
   }
   function histTable(){
     const tg = load(), weeks = [...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b).reverse();
@@ -86,7 +87,7 @@
       return '<tr'+(w===CUR_WEEK?' class="cur"':'')+'><td>'+T('S','W')+w+(w===CUR_WEEK?'<small>'+T('em curso','in progress')+'</small>':'')+'</td>'+cells+'</tr>';
     }).join('');
     return '<div class="scroll"><table class="tgt"><thead><tr><th scope="col">'+T('Semana','Week')+'</th>'+th+'</tr></thead><tbody>'+rows+'</tbody></table></div>'
-      +'<div class="tgcap">'+T('Dist. = distância em km, Rápida = corrida rápida em metros, Acel. = acelerações, Vel. = velocidade máx. em km/h. Distância e corrida rápida: alvo = P75 (top 25%) dos backs no relatório dessa semana; a semana em curso usa o último relatório; semanas sem relatório usam o alvo fixo. A semana em curso conta só até ao mesmo dia. ✓ cumprido, ≈ acima da mediana (P50), ✕ não cumprido, … em curso, – semana com treinos sem GPS.','Dist. = distance in km, Fast = fast running in metres, Acc. = accelerations, Speed = top speed in km/h. Distance and fast running: target = P75 (top 25%) of the backs in that week\'s report; the current week uses the latest report; weeks without a report use the fixed target. The current week only counts up to the same weekday. ✓ met, ≈ above the median (P50), ✕ not met, … in progress, – week with training that had no GPS.')+'</div>';
+      +'<div class="tgcap">'+T('Dist. = distância em km, Rápida = corrida rápida em metros, Acel. = acelerações, Vel. = velocidade máx. em km/h. Distância e corrida rápida: alvo = P75 (top 25%) dos backs nessa mesma semana; semanas sem relatório usam o alvo fixo. A semana em curso conta só até ao mesmo dia. ✓ cumprido, ≈ acima da mediana (P50), ✕ não cumprido, … em curso, – semana com treinos sem GPS.','Dist. = distance in km, Fast = fast running in metres, Acc. = accelerations, Speed = top speed in km/h. Distance and fast running: target = P75 (top 25%) of the backs in that same week; weeks without a report use the fixed target. The current week only counts up to the same weekday. ✓ met, ≈ above the median (P50), ✕ not met, … in progress, – week with training that had no GPS.')+'</div>';
   }
   function addHist(){
     if(!wk || document.getElementById('tghist')) return;
