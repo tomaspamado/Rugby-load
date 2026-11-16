@@ -56,9 +56,9 @@
     const P = posWeek(w);
     if(P){ const me=P.rows.find(r=>r.me), shs=P.rows.filter(r=>r.sh&&!r.me); const wins=['rd','hsr','acc','sp'].filter(k=>shs.every(r=>me[k]>r[k])).length; if(wins>=3) add('nine','base',xs[xs.length-1].date,w,'#1 dos 9 em '+wins+' de 4'); }
     // Alvos da semana (semana fechada, com GPS completo)
-    if(!gap && (w<last.week || dow(xs[xs.length-1].date)>=6)){ const t = wkTot(w), acc = xs.reduce((a,x)=>a+x.accel,0), hit = [t.rd>=TG0.rd, t.hsr>=TG0.hsr, acc>=TG0.accel, t.sp>=MAXREF*SP].filter(Boolean).length; if(hit>=3) add('targets', hit===4?'gold':'silver', xs[xs.length-1].date, w, T(hit+' de 4 alvos cumpridos',hit+' of 4 targets met')); }
+    if(!gap && (w<CUR_WEEK || dow(xs[xs.length-1].date)>=6)){ const t = wkTot(w), acc = xs.reduce((a,x)=>a+x.accel,0), hit = [t.rd>=TG0.rd, t.hsr>=TG0.hsr, acc>=TG0.accel, t.sp>=MAXREF*SP].filter(Boolean).length; if(hit>=3) add('targets', hit===4?'gold':'silver', xs[xs.length-1].date, w, T(hit+' de 4 alvos cumpridos',hit+' of 4 targets met')); }
     // Carga certa (semana fechada)
-    if(!gap && (w<last.week || dow(xs[xs.length-1].date)>=6)){ const lastS = xs[xs.length-1], n28 = SESSIONS.filter(x=>x.date<=lastS.date && (new Date(lastS.date)-new Date(x.date))/86400000<28).length, r = meanRd(7,lastS)/meanRd(28,lastS); if(n28>=6) if(r>=0.8 && r<=1.3) add('load','base',lastS.date,w,T('Carga vs. habitual ','Load vs. usual ')+r.toFixed(2).replace('.',EN?'.':',')); }
+    if(!gap && (w<CUR_WEEK || dow(xs[xs.length-1].date)>=6)){ const lastS = xs[xs.length-1], n28 = SESSIONS.filter(x=>x.date<=lastS.date && (new Date(lastS.date)-new Date(x.date))/86400000<28).length, r = meanRd(7,lastS)/meanRd(28,lastS); if(n28>=6) if(r>=0.8 && r<=1.3) add('load','base',lastS.date,w,T('Carga vs. habitual ','Load vs. usual ')+r.toFixed(2).replace('.',EN?'.':',')); }
   });
 
   // jogos: jogo completo e ritmo de jogo (contra a tua própria média dos jogos anteriores)

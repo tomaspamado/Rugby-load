@@ -21,7 +21,7 @@
   function weekVal(w){
     const cut = weekCut(w), t = wkTot(w,cut); if(!t) return null;
     const acc = SESSIONS.filter(x=>x.week===w && dow(x.date)<=cut).reduce((a,x)=>a+x.accel,0);
-    return {rd:t.rd, hsr:t.hsr, accel:acc, sp:t.sp, n:t.n, open:w===last.week, gap:SESSIONS.some(x=>x.week===w && x.gpsGap)};
+    return {rd:t.rd, hsr:t.hsr, accel:acc, sp:t.sp, n:t.n, open:w===CUR_WEEK, gap:SESSIONS.some(x=>x.week===w && x.gpsGap)};
   }
   // estado de um indicador: ok / open (semana em curso) / miss / na (sem GPS completo)
   function status(w, k, tg){
@@ -75,7 +75,7 @@
     const rows = weeks.map(w => {
       if(!weekVal(w)) return '';
       const cells = KEYS.map(c => { const s = status(w,c.k,tg); return '<td class="'+s.st+'" aria-label="'+WORD[s.st]+'">'+ICON[s.st]+' '+fmtVal(c,s.val)+'</td>'; }).join('');
-      return '<tr'+(w===last.week?' class="cur"':'')+'><td>'+T('S','W')+w+(w===last.week?'<small>'+T('em curso','in progress')+'</small>':'')+'</td>'+cells+'</tr>';
+      return '<tr'+(w===CUR_WEEK?' class="cur"':'')+'><td>'+T('S','W')+w+(w===CUR_WEEK?'<small>'+T('em curso','in progress')+'</small>':'')+'</td>'+cells+'</tr>';
     }).join('');
     return '<div class="scroll"><table class="tgt"><thead><tr><th scope="col">'+T('Semana','Week')+'</th>'+th+'</tr></thead><tbody>'+rows+'</tbody></table></div>'
       +'<div class="tgcap">'+T('Dist. = distância em km, Rápida = corrida rápida em metros, Acel. = acelerações, Vel. = velocidade máx. em km/h. A semana em curso conta só até ao mesmo dia. ✓ cumprido, ✕ não cumprido, … em curso, – semana com treinos sem GPS.','Dist. = distance in km, Fast = fast running in metres, Acc. = accelerations, Speed = top speed in km/h. The current week only counts up to the same weekday. ✓ met, ✕ not met, … in progress, – week with training that had no GPS.')+'</div>';
