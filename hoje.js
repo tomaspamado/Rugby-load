@@ -4,7 +4,8 @@
   const lc = document.getElementById('loadcard'), sc = document.getElementById('s-carga'), ss = document.getElementById('s-sessao');
   const {en: EN, t: TT} = I18N;
   const P0 = dayPlan(), s = P0.s, ratio = P0.ratio;
-  const weight = (typeof BODY!=='undefined' && BODY.length) ? BODY[BODY.length-1].weight : 80;
+  // peso para o carb-up: média de 7 dias da balança, se houver pesagens recentes; senão a última medição ISAK
+  const weight = (window.SCALE && SCALE.weight()) || ((typeof BODY!=='undefined' && BODY.length) ? BODY[BODY.length-1].weight : 80);
   const c1 = Math.round(weight*7), c2 = Math.round(weight*8), carb = TT('carb-up de 7–8 g/kg ('+c1+'–'+c2+' g de hidratos no teu peso)','a 7–8 g/kg carb-up ('+c1+'–'+c2+' g of carbs at your weight)');
   const dd = P0.dd;
   const when = (dd===0 ? TT('Hoje','Today') : TT('Última sessão ','Last session ')+dshort(s.date)+(dd===1?TT(' (ontem)',' (yesterday)'):TT(' (há '+dd+' d)',' ('+dd+' d ago)')))
