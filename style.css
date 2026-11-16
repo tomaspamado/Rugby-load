@@ -561,6 +561,10 @@ details.more>summary,.pos summary{min-height:44px;display:flex;align-items:cente
 .rsp .tg.miss{color:#F2B84B}
 .rsp .tg.open{color:#8FB4E8}
 .rsp .tg.na{color:rgba(255,255,255,.7)}
+.rsp .tg.mid{color:#D6E685}
+.rsp .tgb.mid u{background:#D6E685}
+.rsp .tgsrc{display:block;margin-top:8px;font-size:11px;opacity:.7;line-height:1.35}
+.tgt td.mid{color:#4F6B12;font-weight:600}
 .rsp .tgb{display:block;height:4px;border-radius:2px;background:rgba(255,255,255,.14);margin-top:5px;overflow:hidden}
 .rsp .tgb u{display:block;height:100%;border-radius:2px;background:#8FB4E8;text-decoration:none}
 .rsp .tgb.ok u{background:#5CC48A}
