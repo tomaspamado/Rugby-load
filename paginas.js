@@ -10,19 +10,19 @@
   const wk = document.getElementById('s-wk');
   let wkPanel = null;
   function buildWk(){
-    const w=selWeek, cut=weekCut(w), cur=wkTot(w,cut), weeks=[...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b), pw=weeks[weeks.indexOf(w)-1], prv=pw?wkTot(pw,cut):null;
+    const w=selWeek, cut=weekCut(w), cur=wkTot(w,cut), weeks=weekList().reverse(), pw=weeks[weeks.indexOf(w)-1], prv=pw?wkTot(pw,cut):null;
     const accT=ww=>SESSIONS.filter(x=>x.week===ww && dow(x.date)<=cut).reduce((a,x)=>a+x.accel,0);
     const xs=weekSessions(w), cutName=DOWN[cut%7];
     let h='';
-    if(!cur){ h='<div class="rt">Semana '+w+'</div><small>Sem sessões com GPS neste período.</small>'; }
+    if(!cur){ const pt=pw?wkTot(pw):null; h='<div class="rt">Semana '+w+'</div><small>'+(w===CUR_WEEK?'Começou segunda, '+dshort(weekMon())+'. Ainda sem sessões com GPS.':'Sem sessões com GPS neste período.')+'</small>'+(w===CUR_WEEK&&pt?'<small style="margin-top:8px">Semana '+pw+' fechada: '+f1(pt.rd/1000)+' km em '+pt.n+(pt.n===1?' sessão':' sessões')+', velocidade máx. '+f1(pt.sp)+' km/h.</small>':''); }
     else {
       const gap=SESSIONS.some(x=>x.gpsGap && (x.week===w||x.week===pw)), ok=prv&&prv.n&&!gap;
       const cell=(l,txt,u,raw,pv)=>'<div><small>'+l+'</small><b>'+txt+(u?'<em>'+u+'</em>':'')+'</b>'+(ok?dl(raw,pv):'')+'</div>';
-      h='<div class="rt">Semana '+w+(w===last.week?' · até '+cutName.replace('-feira',''):' · completa')+'</div><small>'+cur.n+(cur.n===1?' sessão':' sessões')+(ok?' · a comparar com a semana '+pw+', só até ao mesmo dia':'')+(gap?' · há treinos sem GPS, não comparo':'')+'</small>'
+      h='<div class="rt">Semana '+w+(w===CUR_WEEK?' · até '+cutName.replace('-feira',''):' · completa')+'</div><small>'+cur.n+(cur.n===1?' sessão':' sessões')+(ok?' · a comparar com a semana '+pw+', só até ao mesmo dia':'')+(gap?' · há treinos sem GPS, não comparo':'')+'</small>'
        +'<div class="g">'+cell('Distância',f1(cur.rd/1000),'km',cur.rd,prv?prv.rd:0)+cell('Corrida rápida',f0(cur.hsr),'m',cur.hsr,prv?prv.hsr:0)+cell('Acelerações',f0(accT(w)),'',accT(w),pw?accT(pw):0)+cell('Velocidade máx.',f1(cur.sp),'km/h',cur.sp,prv?prv.sp:0)+'</div>';
       const P = posWeek(w);
       if(P){ const me=P.rows.find(r=>r.me), o=P.rows.filter(r=>r.sh&&!r.me), n=['rd','hsr','acc','sp'].filter(k=>o.every(r=>me[k]>r[k])).length; h+='<span class="chipw">Entre os 3 scrum-halves: #1 em '+n+' de 4</span>'; }
-      const days=[1,2,3,4,5,6,7].filter(d=>w!==last.week||d<=cut), by=d=>xs.filter(x=>dow(x.date)===d), sm=d=>by(d).reduce((a,x)=>a+x.rd,0), mxv=Math.max(1,...days.map(sm));
+      const days=[1,2,3,4,5,6,7].filter(d=>w!==CUR_WEEK||d<=cut), by=d=>xs.filter(x=>dow(x.date)===d), sm=d=>by(d).reduce((a,x)=>a+x.rd,0), mxv=Math.max(1,...days.map(sm));
       h+='<div class="cols">'+days.map(d=>'<div><em class="bv">'+(sm(d)?f1(sm(d)/1000):'')+'</em><i class="'+(by(d).some(x=>x.type==='Match')?'m':'')+'" style="height:'+(sm(d)?Math.max(3,sm(d)/mxv*52):2).toFixed(0)+'px"></i></div>').join('')+'</div><div class="cl">'+days.map(d=>'<span>'+DS[d%7]+'</span>').join('')+'</div><div class="cap">Distância por dia (km)'+(xs.some(x=>x.type==='Match')?' · vermelho: jogo':'')+'</div>';
     }
     const np=mk(h); if(wkPanel&&wkPanel.parentNode) wkPanel.replaceWith(np); wkPanel=np; return np;

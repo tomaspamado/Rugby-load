@@ -23,7 +23,7 @@
   const DT = DAYTXT[P0.k], D = {k:DT[0], t:TT(DT[1],DT[2]), s:SUB[P0.k]};
   const col = {good:'#5CC48A', warn:'#F2B84B', bad:'#FF6B6B', info:'#8FB4E8'}[D.k];
   const pos = ratio==null?0:Math.max(0,Math.min(100,ratio/1.5*100));
-  const wkSp = Math.max(...SESSIONS.filter(x=>x.week===last.week).map(x=>x.maxSpeed)), goal = MAXREF*spdPct(), cw = wkTot(last.week);
+  const wkSp = Math.max(0, ...SESSIONS.filter(x=>x.week===CUR_WEEK).map(x=>x.maxSpeed)), goal = MAXREF*spdPct(), cw = wkTot(CUR_WEEK) || {rd:0};
   const T = window.TROFEUS || {level:'-',pts:0,medals:[]};
   const fresh = T.medals.filter(m=>m.date===last.date).length;
   const stat = (v,u,l)=>'<div><b>'+v+(u?'<em>'+u+'</em>':'')+'</b><small>'+l+'</small></div>';
@@ -37,7 +37,7 @@
   sec.innerHTML = '<small>'+when+'</small><div class="rt" style="color:'+col+'">'+D.t+'</div><small class="ds">'+D.s+'</small>'
    +'<div class="hc" id="hcoach" role="group" aria-label="Coach"></div>'
    +'<div class="rs-g"><i style="left:'+pos.toFixed(1)+'%"></i><u style="left:53.3%"></u><u style="left:86.7%"></u></div><div class="rs-gl"><span>0</span><span style="left:53.3%">0,8</span><span style="left:86.7%">1,3</span><span style="right:0">1,5+</span></div><small>'+TT('Carga vs. habitual: ','Load vs. usual: ')+(ratio?ratio.toFixed(2).replace('.',EN?'.':','):'-')+TT(' (0,8 a 1,3 é a zona segura)',' (0.8 to 1.3 is the safe zone)')+'</small>'
-   +'<div class="g c3 rs-st">'+stat(f1(cw.rd/1000),'km',TT('Semana ','Week ')+last.week)+stat(f1(wkSp),'km/h',TT('Velocidade máx. · ','Top speed · ')+(wkSp>=goal?TT('alvo ✓','target ✓'):TT('alvo ','target ')+f1(goal)))+trophy+'</div>'
+   +'<div class="g c3 rs-st">'+stat(f1(cw.rd/1000),'km',TT('Semana ','Week ')+CUR_WEEK)+stat(wkSp?f1(wkSp):'–',wkSp?'km/h':'',TT('Velocidade máx. · ','Top speed · ')+(wkSp>=goal?TT('alvo ✓','target ✓'):TT('alvo ','target ')+f1(goal)))+trophy+'</div>'
    +'<svg class="rs-bars" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Distância das últimas 12 sessões"><line x1="0" x2="'+W+'" y1="'+hy+'" y2="'+hy+'" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 4"/>'+bars+'</svg><div class="cap">'+TT('Últimas 12 sessões · tracejado: dia pesado (3500 m) · vermelho: jogo','Last 12 sessions · dashed: heavy day (3,500 m) · red: match')+'</div>';
   hero.after(sec);
   sec.querySelector('.tt').addEventListener('click',()=>showTab('trofeus'));
