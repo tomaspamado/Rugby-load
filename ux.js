@@ -3,35 +3,12 @@
 // Disney: squash & stretch, antecipação, follow through, slow in/out, secundária, timing, exagero, volume.
 // UX: Fitts / áreas grandes, Hick, Miller, Doherty (<400 ms), Postel, Jakob, frequência de uso.
 (function(){
-  const EN = document.documentElement.lang === 'en', T = (pt,en) => EN ? en : pt;
+  const {en: EN, t: T} = I18N;
   const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const SPRING = 'cubic-bezier(.34,1.56,.64,1)';     // slow in/out com ressalto (follow through)
   const EASE = 'cubic-bezier(.2,.8,.2,1)';
 
-  const css = document.createElement('style');
-  css.textContent = ''
-   // Doherty: sem atraso de 300 ms no toque; sem flash cinzento do browser
-   +'html{touch-action:manipulation}button,[role=button],summary,.tabbar button{-webkit-tap-highlight-color:transparent}'
-   // Squash: ao carregar o botão "encolhe" (antecipação), ao largar volta com ressalto (follow through). Snappy: 70 ms a carregar, 240 ms a voltar
-   +'.tabbar button,.seg button,.more-btn,.jump button,.mbtn,.mmenu button,.defs .tgbtns button,.gsheet .bk,.det .bk,.gsheet .bk{transition:transform .16s '+SPRING+'}'
-   +'.rsp .g>div.gt,.go,.lvl,.md[tabindex],.fold>summary{transition:transform .16s '+SPRING+'}'
-   +'.tabbar button:active,.seg button:active,.more-btn:active,.jump button:active,.mbtn:active,.mmenu button:active,.defs .tgbtns button:active,.gsheet .bk:active,.det .bk:active{transform:scale(.93);transition-duration:.07s}'
-   +'.rsp .g>div.gt:active,.go:active,.lvl:active,.md[tabindex]:active,.fold>summary:active{transform:scale(.975);transition-duration:.07s}'
-   // Exagero + secundária: medalha nova "salta"; nível atual na estrada salta e brilha
-   +'@keyframes ux-pop{0%{transform:scale(.55)}55%{transform:scale(1.22)}78%{transform:scale(.94)}100%{transform:scale(1)}}'
-   +'@keyframes ux-sheen{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}'
-   +'.pg.on .tg.new{animation:ux-pop .45s '+EASE+' .15s backwards}'
-   +'.gsheet #rv-cur .emb{animation:ux-pop .5s '+EASE+' .45s backwards}'
-   +'.gsheet #rv-cur{overflow:hidden}.gsheet #rv-cur::after{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.16),transparent);animation:ux-sheen .7s ease-out .6s 1 backwards;pointer-events:none}'
-   // Botão "pílula": translúcido, cantos 14, 52 px de altura (fácil de acertar com o polegar). Em fundos escuros e claros.
-   +'.gsheet .bk,.det .bk,.more-btn,.defs .tgbtns button{border:0;border-radius:14px;min-height:52px;padding:0 20px;font:700 15px Inter,system-ui,sans-serif;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}'
-   +'.gsheet .bk,.det .bk{position:relative;min-height:36px;padding:0 14px;border-radius:12px;font-size:14px;margin-bottom:4px}.gsheet .bk::before,.det .bk::before{content:"";position:absolute;inset:-4px -6px}.gsheet .bk{background:rgba(255,255,255,.14);color:#fff}.det .bk{background:rgba(14,26,46,.08);color:var(--ink,#0E1A2E)}'
-   +'.more-btn{background:rgba(14,26,46,.07);color:var(--ink,#0E1A2E)}.defs .tgbtns button{background:rgba(14,26,46,.07);color:var(--ink,#0E1A2E)}.defs .tgbtns button.pri{background:#0E1A2E;color:#fff}'
-   +'@keyframes ux-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
-   +'.gsheet .rv,.gsheet .lg,.mmenu button{animation:ux-rise .26s '+EASE+' backwards}'
-   +'.tgbusy{opacity:.75;pointer-events:none}'
-   +'.lbar,.tgb,.rsp .tgb{overflow:hidden}';
-  document.body.appendChild(css);
+  // estilos: em style.css (secção UX)
 
   // ---- Squash & stretch no ícone do separador (e Jakob: tocar no separador ativo volta ao topo) ----
   document.querySelectorAll('.tabbar button').forEach(b => b.addEventListener('click', () => {
