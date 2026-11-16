@@ -19,6 +19,17 @@
     ic.animate([{transform:'scale(1,1)'},{transform:'scale(1.18,.8)',offset:.22},{transform:'scale(.88,1.22)',offset:.5},{transform:'scale(1.06,.96)',offset:.75},{transform:'scale(1,1)'}], {duration:360, easing:EASE});
   }, true));
 
+  // ---- Barra de baixo no iPhone: depois de saltos de scroll ou do teclado, o Safari às vezes deixa-a a meio do ecrã ----
+  const tbar = document.getElementById('tabbar');
+  let fixQ = 0;
+  window.UXFIX = () => { if(!tbar || fixQ) return; fixQ = requestAnimationFrame(() => { fixQ = 0; tbar.style.display = 'none'; void tbar.offsetHeight; tbar.style.display = ''; }); };
+  const typing = el => el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && !/^(button|checkbox|radio|range)$/.test(el.type||'');
+  document.addEventListener('focusin', e => { if(typing(e.target)) document.body.classList.add('kb'); });
+  document.addEventListener('focusout', e => { if(typing(e.target)) setTimeout(() => { if(!typing(document.activeElement)){ document.body.classList.remove('kb'); UXFIX(); } }, 60); });
+  if(window.visualViewport) visualViewport.addEventListener('resize', () => { if(visualViewport.height > innerHeight*.85 && !typing(document.activeElement)){ document.body.classList.remove('kb'); UXFIX(); } });
+  addEventListener('pageshow', UXFIX); addEventListener('orientationchange', UXFIX);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) UXFIX(); });
+
   // ---- Follow through: barras de progresso crescem com ressalto quando a página aparece ----
   function growBars(root){
     if(reduce()) return;
