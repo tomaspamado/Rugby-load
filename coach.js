@@ -152,57 +152,103 @@
       +'<div class="cbd"><details><summary><b>'+esc(name)+'</b><small>'+esc(dur)+(extra?' · '+extra:'')+'</small></summary><p>'+esc(how||T('Sem descrição.','No description.'))+'</p></details>'+timerBtn(kind, id, name, dur, done)+'</div></div>';
   }
   // ---------- temporizador dos exercícios com tempo ----------
-  // Guarda a hora a que acaba (não um contador): fechar a app não o pára. Ao voltar, o tempo que passou já conta.
+  // Segue o que a descrição diz: "90 s cada lado" são dois blocos de 90 s, "3 × 20 s" são três de 20 s, e não um bloco com o tempo total.
+  // Exercícios só com repetições (sem tempo na descrição) ficam com o tempo total da sessão.
+  // Guarda a hora de início (não um contador): fechar a app não o pára. Ao voltar, o tempo que passou já conta.
+  const ST = (pt, en, s) => [pt, en, s];
+  const SIDES = (s, sets, rest) => { const o = []; sets = sets||1;
+    for(let i=1;i<=sets;i++){ const n = sets>1 ? ' · '+i+'/'+sets : '';
+      o.push(ST('Lado esquerdo'+n,'Left side'+n,s), ST('Troca de lado','Switch sides',5), ST('Lado direito'+n,'Right side'+n,s));
+      if(rest && i<sets) o.push(ST('Descanso','Rest',rest)); }
+    return o; };
+  const SETS = (s, sets, rest, pt, en) => { const o = [];
+    for(let i=1;i<=sets;i++){ o.push(ST((pt||'Série')+' '+i+'/'+sets,(en||'Set')+' '+i+'/'+sets,s)); if(rest && i<sets) o.push(ST('Descanso','Rest',rest)); }
+    return o; };
+  const GROUPS = (s, list) => list.map(([pt,en]) => ST(pt,en,s));
+  const STEPS = {
+    'p|hip': SIDES(90),
+    'p|ankle': SIDES(30).concat([ST('10 saltos pequenos','10 small hops',30)]),
+    'p|cope': SIDES(20,3,40),
+    'p|9090': SIDES(120),
+    'p|hollow': SETS(30,3,30,'Segura','Hold'),
+    'r|ice': [ST('Imersão (10–12 min)','Immersion (10–12 min)',600)],
+    'r|contrast': [1,2,3,4].flatMap(i => [ST('Quente · ciclo '+i+'/4','Hot · cycle '+i+'/4',180), ST('Frio · ciclo '+i+'/4','Cold · cycle '+i+'/4',60)]),
+    'r|boots': [ST('Botas (20–30 min)','Boots (20–30 min)',1200)],
+    'r|sauna': [ST('Sauna (15–20 min)','Sauna (15–20 min)',900)],
+    'r|hot': [ST('Banho quente (15–20 min)','Hot bath (15–20 min)',900)],
+    'r|roller': GROUPS(180, [['Quadricípites','Quads'],['Isquiotibiais','Hamstrings'],['Banda iliotibial','IT band'],['Gémeos','Calves'],['Dorsal','Lats']]),
+    'r|gun': GROUPS(120, [['Grupo muscular 1','Muscle group 1'],['Grupo muscular 2','Muscle group 2'],['Grupo muscular 3','Muscle group 3'],['Grupo muscular 4','Muscle group 4'],['Grupo muscular 5','Muscle group 5']]),
+    'm|reset': [ST('Foca na expiração','Focus on the exhale',90)],
+    'm|breath': [1,2,3,4].flatMap(i => [ST('Inspira · '+i+'/4','Breathe in · '+i+'/4',4), ST('Segura · '+i+'/4','Hold · '+i+'/4',7), ST('Expira · '+i+'/4','Breathe out · '+i+'/4',8)]).concat([ST('10 expirações fortes','10 sharp exhales',20)]),
+    'def|lowbody': SETS(30,4,30,'Posição','Position'),
+    'def|line': SETS(10,6,40,'Blitz','Blitz')
+  };
+  const durSecs = dur => { const m = /(\d+(?:[.,]\d+)?)\s*min/.exec(String(dur||'')); return m ? Math.round(parseFloat(m[1].replace(',','.'))*60) : 0; };
+  const stepsOf = (kind, id, dur) => STEPS[kind+'|'+id] || (durSecs(dur) ? [ST('Sessão','Session',durSecs(dur))] : null);
+  const stTotal = st => st.reduce((a,x) => a+x[2], 0);
   let TM = load('coach_timers', {});
+  Object.keys(TM).forEach(k => { const x = TM[k]; if(!x.done && x.e==null) delete TM[k]; }); // formato antigo
   const saveTm = () => save('coach_timers', TM);
   const tKey = (kind, id) => todayKey()+'|'+kind+'|'+id;
-  const durSecs = dur => { const m = /(\d+(?:[.,]\d+)?)\s*min/.exec(String(dur||'')); return m ? Math.round(parseFloat(m[1].replace(',','.'))*60) : 0; };
   const mmss = s => Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-  const tLeft = k => { const x = TM[k]; if(!x) return null; return x.endAt ? Math.max(0, Math.ceil((x.endAt-Date.now())/1000)) : x.left; };
+  const elapsed = x => x.s ? x.e + Math.floor((Date.now()-x.s)/1000) : x.e;
+  // em que passo vai e quanto falta nesse passo
+  function where(st, el){
+    let acc = 0;
+    for(let i=0;i<st.length;i++){ if(el < acc+st[i][2]) return {i, left:acc+st[i][2]-el}; acc += st[i][2]; }
+    return {i:st.length, left:0};
+  }
   const hhmm = ms => new Date(ms).toLocaleTimeString(EN?'en-GB':'pt-PT', {hour:'2-digit', minute:'2-digit'});
-  function timerLabel(k, total){
+  function timerInner(k, st){
     const x = TM[k];
-    if(!x) return '▶ '+mmss(total);
-    if(x.done) return '✓ '+T('acabou ','ended ')+hhmm(x.at);
-    return (x.endAt ? '⏸ ' : '▶ ')+mmss(tLeft(k));
+    if(x && x.done) return '<b>✓ '+T('acabou ','ended ')+hhmm(x.at)+'</b>';
+    const w = where(st, x ? elapsed(x) : 0), cur = st[Math.min(w.i, st.length-1)];
+    const icon = !x ? '▶ ' : x.s ? '⏸ ' : '▶ ';
+    return '<b>'+icon+mmss(w.left)+'</b><small>'+(st.length>1 ? T(cur[0],cur[1]) : T('total','total'))+'</small>';
   }
   function timerBtn(kind, id, name, dur, done){
-    const total = durSecs(dur); if(!total || dayOff!==0) return '';
+    const st = stepsOf(kind, id, dur); if(!st || dayOff!==0) return '';
     const k = tKey(kind, id), x = TM[k];
     if(done && !x) return '';
-    const st = !x ? 'idle' : x.done ? 'done' : x.endAt ? 'run' : 'pause';
-    return '<div class="ctmw"><button type="button" class="ctm '+st+'" data-act="tm" data-k="'+kind+'" data-id="'+id+'" data-tm="'+k+'" data-s="'+total+'" aria-label="'+T('Temporizador de ','Timer for ')+esc(name)+'"'+(st==='done'?' disabled':'')+'>'+timerLabel(k, total)+'</button>'
-      +(st==='pause'||st==='done'?'<button type="button" class="ctr" data-act="tmr" data-tm="'+k+'" aria-label="'+T('Recomeçar temporizador','Reset timer')+'">↺</button>':'')+'</div>';
+    const state = !x ? 'idle' : x.done ? 'done' : x.s ? 'run' : 'pause';
+    return '<div class="ctmw"><button type="button" class="ctm '+state+'" data-act="tm" data-tm="'+k+'" aria-label="'+T('Temporizador de ','Timer for ')+esc(name)+'"'+(state==='done'?' disabled':'')+'>'+timerInner(k, st)+'</button>'
+      +(state==='pause'||state==='done'?'<button type="button" class="ctr" data-act="tmr" data-tm="'+k+'" aria-label="'+T('Recomeçar temporizador','Reset timer')+'">↺</button>':'')+'</div>';
   }
-  // som e vibração no fim (só se a app estiver aberta; o som é desbloqueado no toque em ▶)
+  const stepsByKey = k => { const [, kind, id] = k.split('|'); const ex = allOf(kind).find(e => e[0]===id); return ex ? stepsOf(kind, id, view(kind, ex).dur) : null; };
+  // som e vibração (só se a app estiver aberta; o som é desbloqueado no toque em ▶)
   let AC = null;
   const unlockSound = () => { try{ AC = AC || new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){} };
-  const beep = () => { try{ navigator.vibrate && navigator.vibrate([300,120,300,120,300]); }catch(e){}
-    try{ if(!AC) return; [0,.35,.7].forEach(o => { const os = AC.createOscillator(), g = AC.createGain(); os.frequency.value = 880; g.gain.setValueAtTime(.0001, AC.currentTime+o); g.gain.exponentialRampToValueAtTime(.4, AC.currentTime+o+.02); g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+o+.25); os.connect(g); g.connect(AC.destination); os.start(AC.currentTime+o); os.stop(AC.currentTime+o+.3); }); }catch(e){} };
+  const tone = (times, hz) => { try{ if(!AC) return; times.forEach(o => { const os = AC.createOscillator(), g = AC.createGain(); os.frequency.value = hz; g.gain.setValueAtTime(.0001, AC.currentTime+o); g.gain.exponentialRampToValueAtTime(.4, AC.currentTime+o+.02); g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+o+.25); os.connect(g); g.connect(AC.destination); os.start(AC.currentTime+o); os.stop(AC.currentTime+o+.3); }); }catch(e){} };
+  const beep = () => { try{ navigator.vibrate && navigator.vibrate([300,120,300,120,300]); }catch(e){} tone([0,.35,.7], 880); };
+  const blip = () => { try{ navigator.vibrate && navigator.vibrate(200); }catch(e){} tone([0], 660); };
   let WL = null;
   const wake = on => { try{ if(on && !WL && navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { WL = l; l.addEventListener('release', () => { WL = null; }); }).catch(()=>{}); else if(!on && WL){ WL.release(); WL = null; } }catch(e){} };
+  const anyRun = () => Object.values(TM).some(x => x.s);
   function toast(msg){ const el = document.createElement('div'); el.className = 'ctoast'; el.setAttribute('role','status'); el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 5000); }
   // fecha os temporizadores que chegaram ao fim (também os que acabaram com a app fechada) e marca o exercício como feito
   function finishDue(live){
-    let n = 0, names = [];
-    Object.keys(TM).forEach(k => { const x = TM[k]; if(!x.endAt || x.endAt > Date.now()) return;
-      const [dt, kind, id] = k.split('|'); TM[k] = {done:true, at:x.endAt, total:x.total}; n++;
+    let n = 0; const names = [];
+    Object.keys(TM).forEach(k => { const x = TM[k]; if(!x.s) return; const st = stepsByKey(k); if(!st){ delete TM[k]; return; }
+      const tot = stTotal(st); if(elapsed(x) < tot) return;
+      const [dt, kind, id] = k.split('|'); TM[k] = {done:true, at:x.s + (tot - x.e)*1000}; n++;
       const d = day(dt); if(!d[kind].done.includes(id)) d[kind].done.push(id);
       const ex = allOf(kind).find(e => e[0]===id); if(ex) names.push(view(kind, ex).name); });
     if(!n) return false;
     saveTm(); commit();
     if(live) beep(); else toast(T('Temporizador acabou com a app fechada: ','Timer finished while the app was closed: ')+names.join(', ')+T(' (marcado como feito).',' (marked as done).'));
-    if(!Object.values(TM).some(x => x.endAt)) wake(false);
+    if(!anyRun()) wake(false);
     return true;
   }
-  // limpa temporizadores de dias antigos
   Object.keys(TM).forEach(k => { if(k.split('|')[0] < addDays(iso(new Date()), -2)) delete TM[k]; }); saveTm();
+  const lastStep = {};
   setInterval(() => {
-    if(!Object.values(TM).some(x => x.endAt)) return;
+    if(!anyRun()) return;
     if(finishDue(!document.hidden)){ if(pg.classList.contains('on')) render(); return; }
-    pg.querySelectorAll('.ctm.run[data-tm]').forEach(b => { b.textContent = timerLabel(b.dataset.tm, +b.dataset.s); });
-  }, 1000);
-  document.addEventListener('visibilitychange', () => { if(document.hidden) return; if(finishDue(false) && pg.classList.contains('on')) render(); if(Object.values(TM).some(x => x.endAt)) wake(true); });
+    Object.keys(TM).forEach(k => { const x = TM[k]; if(!x.s) return; const st = stepsByKey(k); if(!st) return; const i = where(st, elapsed(x)).i;
+      if(lastStep[k]!=null && lastStep[k]!==i && !document.hidden) blip(); lastStep[k] = i; });
+    pg.querySelectorAll('.ctm.run[data-tm]').forEach(b => { const st = stepsByKey(b.dataset.tm); if(st) b.innerHTML = timerInner(b.dataset.tm, st); });
+  }, 500);
+  document.addEventListener('visibilitychange', () => { if(document.hidden) return; if(finishDue(false) && pg.classList.contains('on')) render(); if(anyRun()) wake(true); });
   function picker(kind, pl, ctx){
     const ago = n => n==null ? T('nunca feito','never done') : n<=0 ? T('feito hoje','done today') : n===1 ? T('feito ontem','done yesterday') : T('feito há '+n+' dias','done '+n+' days ago');
     const off = T('menos indicado hoje','less suited today');
@@ -375,11 +421,11 @@
     else if(act==='toggle'){ const e2 = ensureSet(), i = e2.ids.indexOf(id); if(i<0) e2.ids.push(id); else { e2.ids.splice(i,1); e2.done = e2.done.filter(x => x!==id); } pickOpen[k] = true; commit(); render(); }
     else if(act==='rate'){ const v = +b.dataset.v; d[k].rating = d[k].rating===v ? 0 : v; commit(); render(); }
     else if(act==='qadd'){ const v = parseInt(rd('#qa-'+k)); if(v>0){ d[k].min = (d[k].min||0) + Math.min(300, v); commit(); render(); } else { const f = pg.querySelector('#qa-'+k); if(f) f.focus(); } }
-    else if(act==='tm'){ const k2 = b.dataset.tm, total = +b.dataset.s, x = TM[k2];
-      if(x && x.endAt){ TM[k2] = {left:tLeft(k2), total}; if(!Object.values(TM).some(y => y.endAt)) wake(false); }
-      else { unlockSound(); const left = x && x.left>0 ? x.left : total; TM[k2] = {endAt:Date.now()+left*1000, total}; wake(true); }
+    else if(act==='tm'){ const k2 = b.dataset.tm, x = TM[k2];
+      if(x && x.s){ TM[k2] = {e:elapsed(x)}; if(!anyRun()) wake(false); }
+      else { unlockSound(); TM[k2] = {s:Date.now(), e:x ? x.e : 0}; wake(true); }
       saveTm(); render(); }
-    else if(act==='tmr'){ delete TM[b.dataset.tm]; saveTm(); if(!Object.values(TM).some(y => y.endAt)) wake(false); render(); }
+    else if(act==='tmr'){ delete TM[b.dataset.tm]; saveTm(); if(!anyRun()) wake(false); render(); }
     else if(act==='qundo'){ d[k].min = 0; commit(); render(); }
     else if(act==='dprev'){ dayOff = Math.min(14, dayOff+1); render(); }
     else if(act==='dnext'){ dayOff = Math.max(0, dayOff-1); render(); }
@@ -431,7 +477,7 @@
     });
     c3.querySelector('#ct-reset').addEventListener('click', () => { TGT = {}; commit(); TKINDS.forEach(k => { c3.querySelector('#ct-'+k).value = tgt(k); }); msg.className = 'tgmsg'; msg.textContent = T('✓ Sugeridos repostos.','✓ Suggested values restored.'); render(); });
   }
-  finishDue(false); if(Object.values(TM).some(x => x.endAt)) wake(true);
+  finishDue(false); if(anyRun()) wake(true);
   { const pr = load('coach_plank_run', null); if(pr && pr.day===todayKey()){ PT.startAt = pr.startAt; PT.remAt = pr.remAt; PT.rem = Math.max(0, pr.remAt - Math.floor((Date.now()-pr.startAt)/1000)); PT.state = PT.rem>0 ? 'running' : 'done'; if(PT.rem>0) pstart(true); else pstop(); } }
   const status = () => { const d = day(realToday()); return [['prehab','Prehab',preDone(d)],['recovery',T('Recuperação','Recovery'),kDone(d,'r')],['mental','Mental',kDone(d,'m')]].map(x => ({tab:x[0], name:x[1], done:x[2]})); };
   render();
