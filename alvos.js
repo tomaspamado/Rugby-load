@@ -24,21 +24,25 @@
     return {rd:t.rd, hsr:t.hsr, accel:acc, sp:t.sp, n:t.n, open:w===CUR_WEEK, gap:SESSIONS.some(x=>x.week===w && x.gpsGap)};
   }
   // estado de um indicador: ok / open (semana em curso) / miss / na (sem GPS completo)
+  // distância e corrida rápida: o alvo é o P75 da exigência da semana (demandOf, em relatorios.js); sem relatório, o alvo fixo
   function status(w, k, tg){
     const v = weekVal(w); if(!v) return null;
     tg = tg || load();
-    const val = k==='sp' ? v.sp : v[k], goal = k==='sp' ? goalKmh(tg) : tg[k];
-    const ok = val >= goal;
-    const st = ok ? 'ok' : v.gap ? 'na' : v.open ? 'open' : 'miss';
-    return {st, val, goal, left:Math.max(0, goal-val), pct:Math.min(100, val/goal*100), gap:v.gap};
+    const D = (k==='rd' || k==='hsr') ? demandOf(w) : null;
+    const val = k==='sp' ? v.sp : v[k], goal = D ? D[k].p75 : k==='sp' ? goalKmh(tg) : tg[k], p50 = D ? D[k].p50 : null;
+    const ok = val >= goal, mid = p50!=null && val >= p50;
+    const st = ok ? 'ok' : v.gap ? 'na' : v.open ? 'open' : mid ? 'mid' : 'miss';
+    return {st, val, goal, p50, mid, D, left:Math.max(0, goal-val), pct:Math.min(100, val/goal*100), gap:v.gap};
   }
-  const WORD = {ok:T('cumprido','met'), miss:T('não cumprido','not met'), open:T('em curso','in progress'), na:T('sem GPS completo','incomplete GPS')};
-  const ICON = {ok:'✓', miss:'✕', open:'…', na:'–'};
+  const WORD = {ok:T('cumprido','met'), mid:T('acima da mediana','above the median'), miss:T('não cumprido','not met'), open:T('em curso','in progress'), na:T('sem GPS completo','incomplete GPS')};
+  const ICON = {ok:'✓', mid:'≈', miss:'✕', open:'…', na:'–'};
   const fmtVal = (c, v) => c.k==='sp' ? nfx(v,1) : c.fmt(v);
   const unitOf = c => c.k==='sp' ? 'km/h' : (c.u||'');
   const goalTxt = (c, tg) => c.k==='sp' ? nfx(goalKmh(tg),1)+' km/h' : c.fmt(tg[c.k])+(c.u?' '+c.u:'');
   const leftTxt = (c, s) => c.k==='sp' ? nfx(s.left,1)+' km/h' : (c.k==='rd' ? nfx(s.left/1000,1)+' km' : Math.round(s.left)+(c.u?' '+c.u:''));
 
+  // texto do alvo: P75 (e P50) da semana quando há relatório, senão o alvo fixo
+  const sTxt = (c, tg, s) => s && s.D ? 'P75 '+fmtVal(c, s.goal)+' '+unitOf(c)+' · P50 '+fmtVal(c, s.p50) : goalTxt(c, tg);
   window.TG = {load, status, weekVal, KEYS, WORD, ICON, DEF, goalKmh};
 
   // estilos: em style.css (secção Alvos semanais e Definições)
@@ -55,10 +59,12 @@
     KEYS.forEach((c,i) => {
       const s = status(w, c.k, tg); if(!s) return; tot++; if(s.st==='ok') hit++; if(s.st==='open') open = true;
       const el = tiles[i];
-      const txt = s.st==='ok' ? ICON.ok+' '+T('Alvo ','Target ')+goalTxt(c,tg)+' · '+WORD.ok
-        : s.st==='open' ? ICON.open+' '+T('Alvo ','Target ')+goalTxt(c,tg)+' · '+T('faltam ','')+leftTxt(c,s)+T('',' to go')
-        : s.st==='miss' ? ICON.miss+' '+T('Alvo ','Target ')+goalTxt(c,tg)+' · '+T('faltaram ','missed by ')+leftTxt(c,s)
-        : ICON.na+' '+T('Alvo ','Target ')+goalTxt(c,tg)+' · '+WORD.na;
+      const g = s.D ? sTxt(c,tg,s) : T('Alvo ','Target ')+goalTxt(c,tg);
+      const txt = s.st==='ok' ? ICON.ok+' '+g+' · '+(s.D?T('top 25%','top 25%'):WORD.ok)
+        : s.st==='open' ? ICON.open+' '+g+' · '+T('faltam ','')+leftTxt(c,s)+T('',' to go')+(s.D&&s.mid?T(' (P50 ✓)',' (P50 ✓)'):'')
+        : s.st==='mid' ? ICON.mid+' '+g+' · '+WORD.mid+', '+T('faltaram ','missed P75 by ')+leftTxt(c,s)+T(' para o P75','')
+        : s.st==='miss' ? ICON.miss+' '+g+' · '+(s.D?T('abaixo da mediana','below the median'):T('faltaram ','missed by ')+leftTxt(c,s))
+        : ICON.na+' '+g+' · '+WORD.na;
       el.insertAdjacentHTML('beforeend', '<small class="tg '+s.st+'">'+txt+'</small><i class="tgb '+s.st+'" aria-hidden="true"><u style="width:'+s.pct.toFixed(0)+'%"></u></i>');
     });
     if(tot){
@@ -67,18 +73,20 @@
                        : T('Alvos da semana: ','Weekly targets: ')+hit+T(' de ',' of ')+tot+T(' cumpridos',' met');
       g.insertAdjacentHTML('beforebegin', '<small class="tgsum '+cls+'">'+(all?'✓ ':'')+lbl+'</small>');
     }
+    const D = demandOf(w);
+    if(D) g.insertAdjacentHTML('afterend', '<small class="tgsrc">'+T('Distância e corrida rápida: alvo = percentil 75 dos '+D.n+' backs do relatório da semana '+D.week+(D.own?'':' (a última semana da equipa)')+'. P75 = top 25%, pronto para as exigências; P50 = mediana.','Distance and fast running: target = 75th percentile of the '+D.n+' backs in the week '+D.week+' report'+(D.own?'':' (the team\'s latest week)')+'. P75 = top 25%, ready for the demands; P50 = median.')+'</small>');
   }
   function histTable(){
     const tg = load(), weeks = [...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b).reverse();
     const SH = {rd:T('Dist.','Dist.'), hsr:T('Rápida','Fast'), accel:T('Acel.','Acc.'), sp:T('Vel.','Speed')};
-    const th = KEYS.map(c => '<th scope="col" title="'+c.n+'">'+SH[c.k]+'<small>'+T('alvo ','target ')+(c.k==='sp'?nfx(goalKmh(tg),1):c.k==='rd'?nfx(tg.rd/1000,1):c.fmt(tg[c.k]))+'</small></th>').join('');
+    const th = KEYS.map(c => '<th scope="col" title="'+c.n+'">'+SH[c.k]+'<small>'+((c.k==='rd'||c.k==='hsr') ? T('alvo P75','target P75') : T('alvo ','target ')+(c.k==='sp'?nfx(goalKmh(tg),1):c.fmt(tg[c.k])))+'</small></th>').join('');
     const rows = weeks.map(w => {
       if(!weekVal(w)) return '';
-      const cells = KEYS.map(c => { const s = status(w,c.k,tg); return '<td class="'+s.st+'" aria-label="'+WORD[s.st]+'">'+ICON[s.st]+' '+fmtVal(c,s.val)+'</td>'; }).join('');
+      const cells = KEYS.map(c => { const s = status(w,c.k,tg); return '<td class="'+s.st+'" aria-label="'+WORD[s.st]+'">'+ICON[s.st]+' '+fmtVal(c,s.val)+(s.D?'<small>P75 '+fmtVal(c,s.goal)+'</small>':'')+'</td>'; }).join('');
       return '<tr'+(w===CUR_WEEK?' class="cur"':'')+'><td>'+T('S','W')+w+(w===CUR_WEEK?'<small>'+T('em curso','in progress')+'</small>':'')+'</td>'+cells+'</tr>';
     }).join('');
     return '<div class="scroll"><table class="tgt"><thead><tr><th scope="col">'+T('Semana','Week')+'</th>'+th+'</tr></thead><tbody>'+rows+'</tbody></table></div>'
-      +'<div class="tgcap">'+T('Dist. = distância em km, Rápida = corrida rápida em metros, Acel. = acelerações, Vel. = velocidade máx. em km/h. A semana em curso conta só até ao mesmo dia. ✓ cumprido, ✕ não cumprido, … em curso, – semana com treinos sem GPS.','Dist. = distance in km, Fast = fast running in metres, Acc. = accelerations, Speed = top speed in km/h. The current week only counts up to the same weekday. ✓ met, ✕ not met, … in progress, – week with training that had no GPS.')+'</div>';
+      +'<div class="tgcap">'+T('Dist. = distância em km, Rápida = corrida rápida em metros, Acel. = acelerações, Vel. = velocidade máx. em km/h. Distância e corrida rápida: alvo = P75 (top 25%) dos backs no relatório dessa semana; a semana em curso usa o último relatório; semanas sem relatório usam o alvo fixo. A semana em curso conta só até ao mesmo dia. ✓ cumprido, ≈ acima da mediana (P50), ✕ não cumprido, … em curso, – semana com treinos sem GPS.','Dist. = distance in km, Fast = fast running in metres, Acc. = accelerations, Speed = top speed in km/h. Distance and fast running: target = P75 (top 25%) of the backs in that week\'s report; the current week uses the latest report; weeks without a report use the fixed target. The current week only counts up to the same weekday. ✓ met, ≈ above the median (P50), ✕ not met, … in progress, – week with training that had no GPS.')+'</div>';
   }
   function addHist(){
     if(!wk || document.getElementById('tghist')) return;
@@ -107,7 +115,7 @@
       +'<div class="sub">'+T('Muda estes valores se o treinador te der outros. Contam por semana (até ao mesmo dia na semana em curso) e aparecem na página Semana.','Change these if your coach gives you different ones. They count per week (up to the same weekday in the current week) and show on the Week page.')+'</div>'
       +KEYS.map(c => '<div class="tgrow"><label for="tg-'+c.k+'">'+c.n+'</label><span class="inp"><input id="tg-'+c.k+'" type="text" inputmode="decimal" autocomplete="off" value="'+(c.k==='rd'?nfx(c.to(tg.rd),1):String(Math.round(tg[c.k])))+'" aria-describedby="tgh-'+c.k+'"><span>'+(c.k==='sp'?'%':c.u)+'</span></span>'
          +'<div class="hint" id="tgh-'+c.k+'">'+(c.k==='sp' ? T('Percentagem do teu máximo pessoal ('+nfx(MAXREF,1)+' km/h). Agora: ','Percentage of your personal max ('+nfx(MAXREF,1)+' km/h). Now: ')+'<b class="spk">'+nfx(goalKmh(tg),1)+' km/h</b>. '+T('Sugerido: ','Suggested: ')+DEF.sp+'%'
-            : T('Sugerido: ','Suggested: ')+(c.k==='rd'?nfx(DEF.rd/1000,1):c.fmt(DEF[c.k]))+' '+c.u+' '+T('(uma semana normal tua).','(a normal week for you).'))+'</div></div>').join('')
+            : (c.k==='rd'||c.k==='hsr' ? T('Só para semanas sem relatório da equipa: com relatório, o alvo é o P75 dos backs. ','Only for weeks without a team report: with a report, the target is the backs\' P75. ') : '')+T('Sugerido: ','Suggested: ')+(c.k==='rd'?nfx(DEF.rd/1000,1):c.fmt(DEF[c.k]))+' '+c.u+' '+T('(uma semana normal tua).','(a normal week for you).'))+'</div></div>').join('')
       +'<div class="tgbtns"><button type="button" class="pri" id="tgsave">'+T('Guardar alvos','Save targets')+'</button><button type="button" id="tgreset">'+T('Repor sugeridos','Reset to suggested')+'</button></div>'
       +'<div class="tgmsg" id="tgmsg" role="status" aria-live="polite"></div></div>'
       +'<div class="card" id="langcard" style="padding:14px 16px"></div>';
