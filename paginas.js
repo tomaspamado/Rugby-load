@@ -1,13 +1,6 @@
 // ---------- Painéis de resumo nas outras páginas (mesmo estilo do Hoje) ----------
 (function(){
-  const css = document.createElement('style');
-  css.textContent = '.rsp{background:var(--navy,#0E1A2E);color:#fff;border-radius:14px;padding:16px;margin:14px 0}.rsp small{display:block;font-size:12px;opacity:.75}.rsp .rt{font-family:"Barlow Condensed",sans-serif;font-size:26px;font-weight:700;line-height:1.1}.rsp .rt+small{margin-top:2px}'
-   +'.rsp .g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.rsp .g.c3{grid-template-columns:repeat(3,minmax(0,1fr))}.rsp .g>div{background:rgba(255,255,255,.08);border-radius:10px;padding:10px;min-width:0}.rsp .g b{font-family:"Barlow Condensed",sans-serif;font-size:26px;font-weight:600;line-height:1;display:block}.rsp .g em{font-style:normal;font-size:12px;margin-left:3px;opacity:.75}.rsp .g small{margin-top:5px;font-size:11px}.rsp .g svg{display:block;width:100%;height:26px;margin-top:6px}'
-   +'.rsp .up{color:#5CC48A}.rsp .dn{color:#F2B84B}.rsp .nt{color:#8FB4E8}.rsp .chipw{display:inline-block;margin-top:10px;font-size:12px;font-weight:600;background:#D9981A;color:#0E1A2E;border-radius:99px;padding:4px 10px}'
-   +'.rsp .cols{display:flex;gap:6px;align-items:flex-end;height:64px;margin-top:14px}.rsp .cols div{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}.rsp .cols i{display:block;width:100%;border-radius:4px;background:rgba(255,255,255,.45);min-height:2px}.rsp .cols i.m{background:#FF6B6B}.rsp .cols i.l{background:#D9981A}.rsp .cl{display:flex;gap:6px;margin-top:4px}.rsp .cl span{flex:1;min-width:0;text-align:center;font-size:10px;opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rsp .cap{font-size:11px;opacity:.65;margin-top:6px}'
-   +'.rsp .cols{height:78px}.rsp .cols .bv{font-style:normal;font-size:10px;opacity:.85;margin-bottom:2px;line-height:1}.flt{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin-bottom:10px}.flt .seg{max-width:100%;flex-wrap:wrap}'
-   +'#games>details.fold{grid-column:1/-1;flex:1 0 100%;width:100%;box-sizing:border-box}#games>details.fold .card.game{margin-top:10px}';
-  document.head.appendChild(css);
+  // estilos: em style.css (secção Painéis de resumo (Semana, Evolução, Jogos, Corpo, Mais))
   const mk = html => { const s=document.createElement('section'); s.className='rsp'; s.innerHTML=html; return s; };
   const fold = (title, nodes, id) => { const d=document.createElement('details'); d.className='fold'; if(id) d.id=id; d.innerHTML='<summary><span>'+title+'</span></summary>'; nodes.forEach(n=>n&&d.appendChild(n)); return d; };
   const pct = (v,p)=> p>0 ? (v/p-1)*100 : null;
@@ -27,7 +20,7 @@
       const cell=(l,txt,u,raw,pv)=>'<div><small>'+l+'</small><b>'+txt+(u?'<em>'+u+'</em>':'')+'</b>'+(ok?dl(raw,pv):'')+'</div>';
       h='<div class="rt">Semana '+w+(w===last.week?' · até '+cutName.replace('-feira',''):' · completa')+'</div><small>'+cur.n+(cur.n===1?' sessão':' sessões')+(ok?' · a comparar com a semana '+pw+', só até ao mesmo dia':'')+(gap?' · há treinos sem GPS, não comparo':'')+'</small>'
        +'<div class="g">'+cell('Distância',f1(cur.rd/1000),'km',cur.rd,prv?prv.rd:0)+cell('Corrida rápida',f0(cur.hsr),'m',cur.hsr,prv?prv.hsr:0)+cell('Acelerações',f0(accT(w)),'',accT(w),pw?accT(pw):0)+cell('Velocidade máx.',f1(cur.sp),'km/h',cur.sp,prv?prv.sp:0)+'</div>';
-      const P = w===46 ? POSWK46 : w===45 ? POSWK : null;
+      const P = posWeek(w);
       if(P){ const me=P.rows.find(r=>r.me), o=P.rows.filter(r=>r.sh&&!r.me), n=['rd','hsr','acc','sp'].filter(k=>o.every(r=>me[k]>r[k])).length; h+='<span class="chipw">Entre os 3 scrum-halves: #1 em '+n+' de 4</span>'; }
       const days=[1,2,3,4,5,6,7].filter(d=>w!==last.week||d<=cut), by=d=>xs.filter(x=>dow(x.date)===d), sm=d=>by(d).reduce((a,x)=>a+x.rd,0), mxv=Math.max(1,...days.map(sm));
       h+='<div class="cols">'+days.map(d=>'<div><em class="bv">'+(sm(d)?f1(sm(d)/1000):'')+'</em><i class="'+(by(d).some(x=>x.type==='Match')?'m':'')+'" style="height:'+(sm(d)?Math.max(3,sm(d)/mxv*52):2).toFixed(0)+'px"></i></div>').join('')+'</div><div class="cl">'+days.map(d=>'<span>'+DS[d%7]+'</span>').join('')+'</div><div class="cap">Distância por dia (km)'+(xs.some(x=>x.type==='Match')?' · vermelho: jogo':'')+'</div>';
@@ -55,7 +48,7 @@
       return '<div><small>'+r.n+(r.m==='max'?' (melhor)':' (média)')+'</small><b>'+(r.v==null?'-':r.f(r.v))+(r.u?'<em>'+r.u+'</em>':'')+'</b>'+spark(Q.slice(-12).map(s=>s[r.k]))+(r.x==null?'<small>sem dados</small>':'<small class="'+c+'">'+(r.st>0?'▲':r.st<0?'▼':'●')+' '+(r.x>=0?'+':'')+Math.round(r.x)+'% vs. 4 semanas antes</small>')+'</div>'; };
     const teams = x=>[...new Set(x.map(teamOf))].join(' + ');
     const mixed = A.length && B.length && teams(A)!==teams(B);
-    const title = !A.length||!B.length ? 'Ainda sem dados para comparar' : (up>dn ? 'Em subida em '+up+' de 4' : dn>up ? 'Em descida em '+dn+' de 4' : 'Estável');
+    const title = !A.length||!B.length ? 'Ainda sem dados para comparar' : (up && dn ? 'Misto: sobe em '+up+', desce em '+dn : up ? 'Em subida em '+up+' de 4' : dn ? 'Em descida em '+dn+' de 4' : 'Estável');
     const p = mk('<small>Estás a evoluir?</small><div class="rt">'+title+'</div><small>Semanas '+w1[0]+' a '+w1[w1.length-1]+' vs. '+(w0.length?w0[0]+' a '+w0[w0.length-1]:'-')+' · só treinos de equipa completos ('+A.length+' vs. '+B.length+')</small><div class="g">'+res.map(tile).join('')+'</div><div class="cap">Subida ou descida só conta a partir de 10% (3% na velocidade).'+(mixed?' Nas duas janelas eras de equipas diferentes ('+teams(B)+' antes, '+teams(A)+' agora): lê como indicação.':'')+'</div>');
     const head = ev.querySelector('.head'); head.after(p);
     const segs = [...ev.querySelectorAll('.head .seg')], flt = document.createElement('div'); flt.className='flt'; segs.forEach(sg=>flt.appendChild(sg));
@@ -80,10 +73,10 @@
   // ---- CORPO ----
   const cp = document.getElementById('s-corpo');
   if(cp && typeof BODY!=='undefined' && BODY.length){
-    const b=BODY[BODY.length-1], pv=BODY.length>1?BODY[BODY.length-2]:null, lo=LMI_REF-LMI_SD, hi=LMI_REF+LMI_SD;
-    const s8=b.s8<S8_GOOD?['up','Bom']:b.s8<=S8_OK?['dn','Aceitável']:['dn','A melhorar'], lm=b.lmi<lo?['dn','Abaixo da referência']:['up','Dentro da referência'];
-    const dv=(v,q,u)=>q==null?'':'<small class="nt">'+(v-q>=0?'+':'')+(v-q).toFixed(1).replace('.',',')+u+' vs. anterior</small>';
-    const p=mk('<div class="rt">Medição de '+dshort(b.date)+'</div><small>'+b.team+' · protocolo ISAK</small><div class="g"><div><small>Peso</small><b>'+f1(b.weight)+'<em>kg</em></b>'+dv(b.weight,pv&&pv.weight,' kg')+'</div><div><small>Soma de 8 pregas (Σ8)</small><b>'+f1(b.s8)+'<em>mm</em></b><small class="'+s8[0]+'">'+s8[1]+' (meta &lt;78)</small></div><div><small>Massa gorda</small><b>'+f1(b.fatPct)+'<em>%</em></b>'+dv(b.fatPct,pv&&pv.fatPct,'%')+'</div><div><small>Índice de massa magra (LMI)</small><b>'+f1(b.lmi)+'</b><small class="'+lm[0]+'">'+lm[1]+'</small></div></div>');
+    const b=BODY[BODY.length-1], pv=BODY.length>1?BODY[BODY.length-2]:null, lo=LMI_REF-LMI_SD, hi=LMI_REF+LMI_SD, fx=v=>v==null||isNaN(v)?'–':f1(v);
+    const s8=b.s8==null?['nt','não medido']:b.s8<S8_GOOD?['up','Bom']:b.s8<=S8_OK?['dn','Aceitável']:['dn','A melhorar'], lm=b.lmi==null?['nt','não medido']:b.lmi<lo?['dn','Abaixo da referência']:['up','Dentro da referência'];
+    const dv=(v,q,u)=>q==null||v==null?'':'<small class="nt">'+(v-q>=0?'+':'')+(v-q).toFixed(1).replace('.',',')+u+' vs. anterior</small>';
+    const p=mk('<div class="rt">Medição de '+dshort(b.date)+'</div><small>'+(b.team?b.team+' · ':'')+(b.added?'adicionada na app':'protocolo ISAK')+'</small><div class="g"><div><small>Peso</small><b>'+f1(b.weight)+'<em>kg</em></b>'+dv(b.weight,pv&&pv.weight,' kg')+'</div><div><small>Soma de 8 pregas (Σ8)</small><b>'+fx(b.s8)+'<em>mm</em></b><small class="'+s8[0]+'">'+s8[1]+' (alvo &lt;78)</small></div><div><small>Massa gorda</small><b>'+fx(b.fatPct)+'<em>%</em></b>'+dv(b.fatPct,pv&&pv.fatPct,'%')+'</div><div><small>Índice de massa magra (LMI)</small><b>'+fx(b.lmi)+'</b><small class="'+lm[0]+'">'+lm[1]+'</small></div></div>');
     cp.querySelector('.sub').after(p);
     const bt=document.querySelector('#bodycard .btiles'); if(bt) bt.style.display='none';
   }
@@ -94,7 +87,7 @@
     const first=mp.querySelector('section'), wks=[...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b), cnt=wks.map(w=>SESSIONS.filter(x=>x.week===w).length), mxc=Math.max(...cnt), T=window.TROFEUS||{medals:[],level:'-',pts:0};
     const p=mk('<div class="rt">A tua época em números</div><small>Desde '+dshort(SESSIONS[0].date)+' · '+wks.length+' semanas com GPS</small><div class="g c3"><div><small>Sessões</small><b>'+SESSIONS.length+'</b></div><div><small>Jogos</small><b>'+SESSIONS.filter(x=>x.type==='Match').length+'</b></div><div><small>Medalhas</small><b>'+T.medals.length+'</b><small>nível '+T.level+'</small></div></div>'
      +'<div class="cols">'+cnt.map((c,ix)=>'<div><em class="bv">'+c+'</em><i class="'+(ix===cnt.length-1?'l':'')+'" style="height:'+Math.max(4,c/mxc*52).toFixed(0)+'px"></i></div>').join('')+'</div><div class="cl">'+wks.map(w=>'<span>'+w+'</span>').join('')+'</div><div class="cap">Sessões por semana</div>');
-    first.before(p);
+    const h=document.createElement('h2'); h.textContent='Mais'; h.className='pgt'; first.before(h); first.before(p);
     const gl=mp.querySelector('.gloss'); if(gl){ const d=fold('Glossário',[]); d.appendChild(gl); gl.parentNode===d||0; mp.querySelector('.foot').before(d); }
   }
 })();
