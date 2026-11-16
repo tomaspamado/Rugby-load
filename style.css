@@ -756,3 +756,10 @@ to{opacity:1;transform:none}}
 #pg-coach .cday button{width:44px;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:20px;color:var(--ink);cursor:pointer}
 #pg-coach .cday button:disabled{opacity:.35;cursor:default}
 #pg-coach .cmod small{grid-column:2/4;font-size:12px;color:var(--ink-muted);margin-top:-6px}
+
+/* ================= iPhone: barra de baixo estável e faixa da barra de estado ================= */
+.tabbar{will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden}
+body.kb .tabbar{display:none}
+body.kb{padding-bottom:16px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:#0E1A2E;z-index:40;pointer-events:none}
+body{padding-top:calc(20px + env(safe-area-inset-top,0px))}
