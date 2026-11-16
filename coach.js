@@ -149,8 +149,60 @@
   const L = (o,i) => EN ? o[i+1] : o[i];
   function item(kind, id, name, dur, how, done, extra){
     return '<div class="crow"><button type="button" class="cchk" role="checkbox" data-act="tick" data-k="'+kind+'" data-id="'+id+'" aria-checked="'+done+'" aria-label="'+esc(name)+': '+T('feito','done')+'">'+CHECK+'</button>'
-      +'<details><summary><b>'+esc(name)+'</b><small>'+esc(dur)+(extra?' · '+extra:'')+'</small></summary><p>'+esc(how||T('Sem descrição.','No description.'))+'</p></details></div>';
+      +'<div class="cbd"><details><summary><b>'+esc(name)+'</b><small>'+esc(dur)+(extra?' · '+extra:'')+'</small></summary><p>'+esc(how||T('Sem descrição.','No description.'))+'</p></details>'+timerBtn(kind, id, name, dur, done)+'</div></div>';
   }
+  // ---------- temporizador dos exercícios com tempo ----------
+  // Guarda a hora a que acaba (não um contador): fechar a app não o pára. Ao voltar, o tempo que passou já conta.
+  let TM = load('coach_timers', {});
+  const saveTm = () => save('coach_timers', TM);
+  const tKey = (kind, id) => todayKey()+'|'+kind+'|'+id;
+  const durSecs = dur => { const m = /(\d+(?:[.,]\d+)?)\s*min/.exec(String(dur||'')); return m ? Math.round(parseFloat(m[1].replace(',','.'))*60) : 0; };
+  const mmss = s => Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  const tLeft = k => { const x = TM[k]; if(!x) return null; return x.endAt ? Math.max(0, Math.ceil((x.endAt-Date.now())/1000)) : x.left; };
+  const hhmm = ms => new Date(ms).toLocaleTimeString(EN?'en-GB':'pt-PT', {hour:'2-digit', minute:'2-digit'});
+  function timerLabel(k, total){
+    const x = TM[k];
+    if(!x) return '▶ '+mmss(total);
+    if(x.done) return '✓ '+T('acabou ','ended ')+hhmm(x.at);
+    return (x.endAt ? '⏸ ' : '▶ ')+mmss(tLeft(k));
+  }
+  function timerBtn(kind, id, name, dur, done){
+    const total = durSecs(dur); if(!total || dayOff!==0) return '';
+    const k = tKey(kind, id), x = TM[k];
+    if(done && !x) return '';
+    const st = !x ? 'idle' : x.done ? 'done' : x.endAt ? 'run' : 'pause';
+    return '<div class="ctmw"><button type="button" class="ctm '+st+'" data-act="tm" data-k="'+kind+'" data-id="'+id+'" data-tm="'+k+'" data-s="'+total+'" aria-label="'+T('Temporizador de ','Timer for ')+esc(name)+'"'+(st==='done'?' disabled':'')+'>'+timerLabel(k, total)+'</button>'
+      +(st==='pause'||st==='done'?'<button type="button" class="ctr" data-act="tmr" data-tm="'+k+'" aria-label="'+T('Recomeçar temporizador','Reset timer')+'">↺</button>':'')+'</div>';
+  }
+  // som e vibração no fim (só se a app estiver aberta; o som é desbloqueado no toque em ▶)
+  let AC = null;
+  const unlockSound = () => { try{ AC = AC || new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){} };
+  const beep = () => { try{ navigator.vibrate && navigator.vibrate([300,120,300,120,300]); }catch(e){}
+    try{ if(!AC) return; [0,.35,.7].forEach(o => { const os = AC.createOscillator(), g = AC.createGain(); os.frequency.value = 880; g.gain.setValueAtTime(.0001, AC.currentTime+o); g.gain.exponentialRampToValueAtTime(.4, AC.currentTime+o+.02); g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+o+.25); os.connect(g); g.connect(AC.destination); os.start(AC.currentTime+o); os.stop(AC.currentTime+o+.3); }); }catch(e){} };
+  let WL = null;
+  const wake = on => { try{ if(on && !WL && navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { WL = l; l.addEventListener('release', () => { WL = null; }); }).catch(()=>{}); else if(!on && WL){ WL.release(); WL = null; } }catch(e){} };
+  function toast(msg){ const el = document.createElement('div'); el.className = 'ctoast'; el.setAttribute('role','status'); el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 5000); }
+  // fecha os temporizadores que chegaram ao fim (também os que acabaram com a app fechada) e marca o exercício como feito
+  function finishDue(live){
+    let n = 0, names = [];
+    Object.keys(TM).forEach(k => { const x = TM[k]; if(!x.endAt || x.endAt > Date.now()) return;
+      const [dt, kind, id] = k.split('|'); TM[k] = {done:true, at:x.endAt, total:x.total}; n++;
+      const d = day(dt); if(!d[kind].done.includes(id)) d[kind].done.push(id);
+      const ex = allOf(kind).find(e => e[0]===id); if(ex) names.push(view(kind, ex).name); });
+    if(!n) return false;
+    saveTm(); commit();
+    if(live) beep(); else toast(T('Temporizador acabou com a app fechada: ','Timer finished while the app was closed: ')+names.join(', ')+T(' (marcado como feito).',' (marked as done).'));
+    if(!Object.values(TM).some(x => x.endAt)) wake(false);
+    return true;
+  }
+  // limpa temporizadores de dias antigos
+  Object.keys(TM).forEach(k => { if(k.split('|')[0] < addDays(iso(new Date()), -2)) delete TM[k]; }); saveTm();
+  setInterval(() => {
+    if(!Object.values(TM).some(x => x.endAt)) return;
+    if(finishDue(!document.hidden)){ if(pg.classList.contains('on')) render(); return; }
+    pg.querySelectorAll('.ctm.run[data-tm]').forEach(b => { b.textContent = timerLabel(b.dataset.tm, +b.dataset.s); });
+  }, 1000);
+  document.addEventListener('visibilitychange', () => { if(document.hidden) return; if(finishDue(false) && pg.classList.contains('on')) render(); if(Object.values(TM).some(x => x.endAt)) wake(true); });
   function picker(kind, pl, ctx){
     const ago = n => n==null ? T('nunca feito','never done') : n<=0 ? T('feito hoje','done today') : n===1 ? T('feito ontem','done yesterday') : T('feito há '+n+' dias','done '+n+' days ago');
     const off = T('menos indicado hoje','less suited today');
@@ -239,12 +291,13 @@
     if(t) t.textContent = pfmt(PT.rem);
     if(r) r.setAttribute('stroke-dashoffset', C*(1-Math.round((act-PT.rem)/act*100)/100));
   }
-  function pstop(){ clearInterval(PT.iv); PT.iv = null; }
-  function pstart(){
-    PT.state = 'running'; PT.startAt = Date.now(); PT.remAt = PT.rem;
-    pstop(); PT.iv = setInterval(() => {
+  function pstop(){ clearInterval(PT.iv); PT.iv = null; try{ localStorage.removeItem('coach_plank_run'); }catch(e){} }
+  function pstart(resume){
+    if(!resume){ PT.state = 'running'; PT.startAt = Date.now(); PT.remAt = PT.rem; unlockSound(); }
+    clearInterval(PT.iv); save('coach_plank_run', {startAt:PT.startAt, remAt:PT.remAt, day:todayKey()});
+    PT.iv = setInterval(() => {
       const left = Math.max(0, PT.remAt - Math.floor((Date.now()-PT.startAt)/1000)); PT.rem = left; ptickDom();
-      if(left===0){ pstop(); PT.state = 'done'; try{ navigator.vibrate && navigator.vibrate([200,80,200]); }catch(e){} render(); }
+      if(left===0){ pstop(); PT.state = 'done'; beep(); render(); }
     }, 500);
   }
 
@@ -322,6 +375,11 @@
     else if(act==='toggle'){ const e2 = ensureSet(), i = e2.ids.indexOf(id); if(i<0) e2.ids.push(id); else { e2.ids.splice(i,1); e2.done = e2.done.filter(x => x!==id); } pickOpen[k] = true; commit(); render(); }
     else if(act==='rate'){ const v = +b.dataset.v; d[k].rating = d[k].rating===v ? 0 : v; commit(); render(); }
     else if(act==='qadd'){ const v = parseInt(rd('#qa-'+k)); if(v>0){ d[k].min = (d[k].min||0) + Math.min(300, v); commit(); render(); } else { const f = pg.querySelector('#qa-'+k); if(f) f.focus(); } }
+    else if(act==='tm'){ const k2 = b.dataset.tm, total = +b.dataset.s, x = TM[k2];
+      if(x && x.endAt){ TM[k2] = {left:tLeft(k2), total}; if(!Object.values(TM).some(y => y.endAt)) wake(false); }
+      else { unlockSound(); const left = x && x.left>0 ? x.left : total; TM[k2] = {endAt:Date.now()+left*1000, total}; wake(true); }
+      saveTm(); render(); }
+    else if(act==='tmr'){ delete TM[b.dataset.tm]; saveTm(); if(!Object.values(TM).some(y => y.endAt)) wake(false); render(); }
     else if(act==='qundo'){ d[k].min = 0; commit(); render(); }
     else if(act==='dprev'){ dayOff = Math.min(14, dayOff+1); render(); }
     else if(act==='dnext'){ dayOff = Math.max(0, dayOff-1); render(); }
@@ -373,6 +431,8 @@
     });
     c3.querySelector('#ct-reset').addEventListener('click', () => { TGT = {}; commit(); TKINDS.forEach(k => { c3.querySelector('#ct-'+k).value = tgt(k); }); msg.className = 'tgmsg'; msg.textContent = T('✓ Sugeridos repostos.','✓ Suggested values restored.'); render(); });
   }
+  finishDue(false); if(Object.values(TM).some(x => x.endAt)) wake(true);
+  { const pr = load('coach_plank_run', null); if(pr && pr.day===todayKey()){ PT.startAt = pr.startAt; PT.remAt = pr.remAt; PT.rem = Math.max(0, pr.remAt - Math.floor((Date.now()-pr.startAt)/1000)); PT.state = PT.rem>0 ? 'running' : 'done'; if(PT.rem>0) pstart(true); else pstop(); } }
   const status = () => { const d = day(realToday()); return [['prehab','Prehab',preDone(d)],['recovery',T('Recuperação','Recovery'),kDone(d,'r')],['mental','Mental',kDone(d,'m')]].map(x => ({tab:x[0], name:x[1], done:x[2]})); };
   render();
   window.COACH = {status, render, setCtx:v => { ctxOverride = v; render(); }, setToday:v => { todayOverride = v; render(); }, reset:() => { LOG = {}; CUSTOM = {}; PB = {sessions:0, weightKg:0, lastTarget:0, lastDate:''}; commit(); render(); }, setTab:v => { tab = v; render(); }};
