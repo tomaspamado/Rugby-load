@@ -756,6 +756,17 @@ to{opacity:1;transform:none}}
 #pg-coach .cday button{width:44px;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:20px;color:var(--ink);cursor:pointer}
 #pg-coach .cday button:disabled{opacity:.35;cursor:default}
 #pg-coach .cmod small{grid-column:2/4;font-size:12px;color:var(--ink-muted);margin-top:-6px}
+#pg-coach .cbd{display:flex;gap:8px;align-items:flex-start;min-width:0}
+#pg-coach .cbd>details{flex:1;min-width:0}
+#pg-coach .ctmw{display:flex;gap:4px;flex:none}
+#pg-coach .ctm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15;max-width:132px;min-height:48px;min-width:84px;border:0;border-radius:10px;background:rgba(14,26,46,.07);color:var(--ink,#0E1A2E);font:700 15px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;padding:0 12px;cursor:pointer;white-space:nowrap;transition:transform .16s cubic-bezier(.34,1.56,.64,1)}
+#pg-coach .ctm.run{background:#D9981A;color:#fff}
+#pg-coach .ctm small{font:600 11px Inter,system-ui,sans-serif;opacity:.85;white-space:normal;text-align:center}
+#pg-coach .ctm.pause{box-shadow:inset 0 0 0 2px #D9981A}
+#pg-coach .ctm.done{background:rgba(46,125,74,.12);color:#2E7D4A;font-size:13px;min-width:0;cursor:default}
+#pg-coach .ctr{width:44px;min-height:48px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink-muted);font-size:18px;cursor:pointer}
+#pg-coach .ctm:active,#pg-coach .ctr:active{transform:scale(.93);transition-duration:.07s}
+.ctoast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:70;max-width:min(92vw,480px);background:#0E1A2E;color:#fff;font:600 14px/1.35 Inter,system-ui,sans-serif;padding:12px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(14,26,46,.3);animation:ux-rise .26s cubic-bezier(.2,.8,.2,1) backwards}
 
 /* ================= iPhone: barra de baixo estável e faixa da barra de estado ================= */
 .tabbar{will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden}
