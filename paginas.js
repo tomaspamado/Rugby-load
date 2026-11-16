@@ -7,6 +7,11 @@
   const dl = (v,p)=>{ const x=pct(v,p); if(x==null) return ''; const c = Math.abs(x)<5?'nt':(x>0?'up':'dn'); return '<small class="'+c+'">'+(x>=5?'▲':x<=-5?'▼':'●')+' '+(x>=0?'+':'')+Math.round(x)+'% vs. semana anterior</small>'; };
 
   // ---- SEMANA ----
+  // semana em curso sem sessões: o alvo de distância e corrida rápida é o P75 dos backs desta mesma semana (só se sabe com o relatório)
+  const demandBox = w => { const D = typeof demandOf==='function' ? demandOf(w) : null;
+    if(!D) return '<small class="tgsrc">Distância e corrida rápida: o alvo é o percentil 75 (top 25%) dos backs nesta mesma semana. Aparece quando adicionares o relatório da semana '+w+'.</small>';
+    return '<div class="g"><div><small>Distância · alvo</small><b>'+f1(D.rd.p75/1000)+'<em>km</em></b><small>P75 · P50 '+f1(D.rd.p50/1000)+' km</small></div><div><small>Corrida rápida · alvo</small><b>'+f0(D.hsr.p75)+'<em>m</em></b><small>P75 · P50 '+f0(D.hsr.p50)+' m</small></div></div>'
+      +'<small class="tgsrc">Alvo = percentil 75 (top 25%) dos '+D.n+' backs nesta mesma semana. Estar no P75 é estar pronto para as exigências; acima do P50 estás perto.</small>'; };
   const wk = document.getElementById('s-wk');
   let wkPanel = null;
   function buildWk(){
@@ -14,7 +19,7 @@
     const accT=ww=>SESSIONS.filter(x=>x.week===ww && dow(x.date)<=cut).reduce((a,x)=>a+x.accel,0);
     const xs=weekSessions(w), cutName=DOWN[cut%7];
     let h='';
-    if(!cur){ const pt=pw?wkTot(pw):null; h='<div class="rt">Semana '+w+'</div><small>'+(w===CUR_WEEK?'Começou segunda, '+dshort(weekMon())+'. Ainda sem sessões com GPS.':'Sem sessões com GPS neste período.')+'</small>'+(w===CUR_WEEK&&pt?'<small style="margin-top:8px">Semana '+pw+' fechada: '+f1(pt.rd/1000)+' km em '+pt.n+(pt.n===1?' sessão':' sessões')+', velocidade máx. '+f1(pt.sp)+' km/h.</small>':''); }
+    if(!cur){ const pt=pw?wkTot(pw):null; h='<div class="rt">Semana '+w+'</div><small>'+(w===CUR_WEEK?'Começou segunda, '+dshort(weekMon())+'. Ainda sem sessões com GPS.':'Sem sessões com GPS neste período.')+'</small>'+(w===CUR_WEEK&&pt?'<small style="margin-top:8px">Semana '+pw+' fechada: '+f1(pt.rd/1000)+' km em '+pt.n+(pt.n===1?' sessão':' sessões')+', velocidade máx. '+f1(pt.sp)+' km/h.</small>':'')+(w===CUR_WEEK?demandBox(w):''); }
     else {
       const gap=SESSIONS.some(x=>x.gpsGap && (x.week===w||x.week===pw)), ok=prv&&prv.n&&!gap;
       const cell=(l,txt,u,raw,pv)=>'<div><small>'+l+'</small><b>'+txt+(u?'<em>'+u+'</em>':'')+'</b>'+(ok?dl(raw,pv):'')+'</div>';
