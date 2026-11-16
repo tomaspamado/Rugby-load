@@ -6,6 +6,8 @@
   try{ L = localStorage.getItem('lang') || ''; }catch(e){}
   if(!L){ try{ const m = /(?:^|;)lang=(en|pt)/.exec(window.name||''); if(m) L = m[1]; }catch(e){} }
   if(L !== 'en') L = 'pt';
+  // ajuda partilhada para texto novo escrito nos dois idiomas: const {en: EN, t: T} = I18N;
+  window.I18N = {en: L==='en', t: (pt,en) => L==='en' ? en : pt};
   const store = v => { try{ localStorage.setItem('lang', v); }catch(e){} try{ window.name = 'lang='+v+';'+(window.name||'').replace(/(?:^|;)lang=(en|pt)/g,''); }catch(e){} };
 
   // ---------- dicionário ----------
