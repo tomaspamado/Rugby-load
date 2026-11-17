@@ -43,3 +43,27 @@
 #s-balanca .bal-am button{align-self:flex-start;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:transparent;color:rgba(255,255,255,.9);font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
 #s-balanca .bal-del{min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink-muted);font:600 13px Inter,system-ui,sans-serif;cursor:pointer}
 
+/* folha da manhã (sobe de baixo) */
+.bs{position:fixed;inset:0;z-index:80}
+.bs-scrim{position:absolute;inset:0;background:rgba(14,26,46,.45)}
+.bs-sheet{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;background:var(--surface,#fff);border-radius:20px 20px 0 0;padding:8px max(16px,env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));box-shadow:0 -8px 30px rgba(14,26,46,.18)}
+.bs-grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 10px}
+.bs .bs-top{margin:0 0 14px}
+.bs .bs-top .rt{font-size:30px}
+.bs .frm .fr2>label{min-width:0}
+.bs .bs-pri{display:block;width:100%;min-height:52px;margin-top:6px;border:0;border-radius:14px;background:#0E1A2E;color:#fff;font:700 15px Inter,system-ui,sans-serif;cursor:pointer}
+.bs .bs-sec{display:block;width:100%;min-height:48px;margin-top:8px;border:1px solid var(--line);border-radius:14px;background:transparent;color:var(--ink);font:600 15px Inter,system-ui,sans-serif;cursor:pointer}
+.bs .bs-pri:focus-visible,.bs .bs-sec:focus-visible{outline:2px solid #D9981A;outline-offset:2px}
+.bs .tgmsg{font-size:13px;font-weight:600;color:#1F5A2B;min-height:18px}
+.bs .tgmsg.err{color:#7A5300}
+.bs .sub{margin-top:12px}
+.bs-fb{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.bs-fb li{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:14px}
+.bs-fb li>div{min-width:0;display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.4}
+.bs-fb li b{font-size:13px}
+.bs-ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 14px Inter,system-ui,sans-serif;color:#fff}
+.bs-fb li.good .bs-ic{background:#1F7A3A} .bs-fb li.good b{color:#1F5A2B}
+.bs-fb li.warn .bs-ic{background:#B07A00} .bs-fb li.warn b{color:#7A5300}
+.bs-fb li.info .bs-ic{background:#2F5D9A} .bs-fb li.info b{color:#24497A}
+body.bs-open{overflow:hidden}
+body.bs-open #tabbar{visibility:hidden}

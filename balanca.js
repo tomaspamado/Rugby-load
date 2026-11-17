@@ -248,12 +248,112 @@
   wrap.addEventListener('keydown', e => { const ob = e.target.closest('div[data-open]'); if(ob && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); openSheet(ob, ob.dataset.open); } });
   render();
 
-  // ao abrir a app (ou voltar a ela) de manhã: vai para Corpo, com o formulário logo a seguir ao pedido
-  function checkMorning(){
-    if(!morning() || document.querySelector('.gsheet')) return; amOn = true; render();
-    const pc = document.getElementById('pg-corpo'); if(typeof showTab==='function' && !(pc && pc.classList.contains('on'))) showTab('corpo');
-    setTimeout(() => { const b = document.getElementById('bl-am'); if(b) b.scrollIntoView({block:'start', behavior:'auto'}); }, 420);
+  // ---------- pedido da manhã: folha que sobe de baixo, com os mesmos campos e uma leitura rápida no fim ----------
+  // Leitura: compara a pesagem de hoje com a tua média dos 7 dias anteriores (água, peso) e as médias de 7 dias
+  // de hoje e de há ~28 dias (gordura, músculo). Bioimpedância: indicação, não diagnóstico.
+  function readFeedback(L, today){
+    const t = L.find(x => x.date===today); if(!t) return null;
+    const tt = toT(today), prev = L.filter(x => x.date<today && tt-toT(x.date) <= 7*DAY);
+    if(prev.length < 3) return {head:T('Pesagem guardada','Weigh-in saved'), items:[{k:'info', w:T('Ainda a aprender','Still learning'), t:T('Tens '+(prev.length)+' pesagem(ns) nos 7 dias antes de hoje. A partir de 3 começo a comparar com o teu normal.','You have '+prev.length+' weigh-in(s) in the 7 days before today. From 3 on, I compare with your normal.')}]};
+    const base = k => { const xs = prev.map(x=>x[k]).filter(v=>v!=null); return xs.length>=3 ? xs.reduce((a,v)=>a+v,0)/xs.length : null; };
+    const items = []; let head = null;
+    // água: o sinal mais rápido de desidratação (de manhã, antes de beber)
+    const bw = base('wat'), bWt = base('w');
+    const dW = t.wat!=null && bw!=null ? t.wat - bw : null, dKg = t.w!=null && bWt!=null ? t.w - bWt : null;
+    if(dW!=null){
+      if(dW <= -1 || (dW <= -0.6 && dKg!=null && dKg <= -0.8)){ items.push({k:'warn', w:T('Atenção','Watch out'), t:T('Água '+nfx(Math.abs(dW),1)+' pontos abaixo do teu normal'+(dKg!=null && dKg<=-0.5?' e peso '+nfx(Math.abs(dKg),1)+' kg abaixo':'')+': provavelmente desidratado. Bebe ~500 ml de água com um pouco de sal agora e vai bebendo até ao treino.','Water '+nfx(Math.abs(dW),1)+' points below your normal'+(dKg!=null && dKg<=-0.5?' and weight '+nfx(Math.abs(dKg),1)+' kg below':'')+': probably dehydrated. Drink ~500 ml of water with a pinch of salt now and keep drinking until training.')});
+        head = T('Bebe água: estás abaixo do teu normal','Drink water: you are below your normal'); }
+      else if(dW >= 1) items.push({k:'info', w:T('Normal','Normal'), t:T('Água '+nfx(dW,1)+' pontos acima do teu normal. Bem hidratado (ou muito sal/hidratos ontem).','Water '+nfx(dW,1)+' points above your normal. Well hydrated (or lots of salt/carbs yesterday).')});
+      else items.push({k:'good', w:T('Bom','Good'), t:T('Hidratação dentro do teu normal ('+nfx(t.wat,1)+'%).','Hydration within your normal ('+nfx(t.wat,1)+'%).')});
+    }
+    // peso de um dia vs. a média
+    if(dKg!=null) items.push({k:'info', w:T('Peso','Weight'), t: Math.abs(dKg) < 0.5
+      ? T('Peso estável: '+nfx(t.w,1)+' kg, perto da tua média de 7 dias ('+nfx(bWt,1)+' kg).','Steady weight: '+nfx(t.w,1)+' kg, close to your 7-day average ('+nfx(bWt,1)+' kg).')
+      : T(nfx(t.w,1)+' kg, '+(dKg>0?'+':'−')+nfx(Math.abs(dKg),1)+' kg vs. a tua média de 7 dias. Um dia sozinho mexe com água e comida; vê a média no Corpo.',nfx(t.w,1)+' kg, '+(dKg>0?'+':'−')+nfx(Math.abs(dKg),1)+' kg vs. your 7-day average. A single day moves with water and food; check the average in Body.')});
+    // composição: médias de 7 dias de hoje vs. há ~28 dias (ou vs. a semana anterior, se ainda não houver 28 dias)
+    const ref = (() => { const r = L.filter(x => tt-toT(x.date) >= 26*DAY); if(r.length) return {d:r[r.length-1].date, w:T('há 4 semanas','4 weeks ago')};
+      const r2 = L.filter(x => tt-toT(x.date) >= 7*DAY); return r2.length ? {d:r2[r2.length-1].date, w:T('a semana passada','last week')} : null; })();
+    let fatDn = false, musUp = false;
+    if(ref){
+      const tr = k => { const a = avg7(L, today, k), b = avg7(L, ref.d, k); return a!=null && b!=null ? a-b : null; };
+      const df = tr('fat'), dm = tr('mus');
+      if(df!=null){ fatDn = df <= -0.3;
+        items.push(df <= -0.3 ? {k:'good', w:T('Bom','Good'), t:T('Gordura a descer: '+nfx(Math.abs(df),1)+' pontos na média de 7 dias vs. '+ref.w+'.','Fat going down: '+nfx(Math.abs(df),1)+' points on the 7-day average vs. '+ref.w+'.')}
+          : df >= 0.3 ? {k:'warn', w:T('Atenção','Watch out'), t:T('Gordura a subir: +'+nfx(df,1)+' pontos na média de 7 dias vs. '+ref.w+'. Vê com a nutricionista se é de propósito.','Fat going up: +'+nfx(df,1)+' points on the 7-day average vs. '+ref.w+'. Check with the nutritionist if it is on purpose.')}
+          : {k:'info', w:T('Estável','Steady'), t:T('Gordura estável vs. '+ref.w+'.','Fat steady vs. '+ref.w+'.')}); }
+      if(dm!=null){ musUp = dm >= 0.3;
+        items.push(dm >= 0.3 ? {k:'good', w:T('Bom','Good'), t:T('Músculo a subir: +'+nfx(dm,1)+' pontos na média de 7 dias vs. '+ref.w+'.','Muscle going up: +'+nfx(dm,1)+' points on the 7-day average vs. '+ref.w+'.')}
+          : dm <= -0.3 ? {k:'warn', w:T('Atenção','Watch out'), t:T('Músculo a descer: '+nfx(dm,1)+' pontos vs. '+ref.w+'. Confirma proteína e sono; se continuar, fala com a nutricionista.','Muscle going down: '+nfx(dm,1)+' points vs. '+ref.w+'. Check protein and sleep; if it continues, talk to the nutritionist.')}
+          : {k:'info', w:T('Estável','Steady'), t:T('Músculo estável vs. '+ref.w+'.','Muscle steady vs. '+ref.w+'.')}); }
+    }
+    if(!head) head = fatDn && musUp ? T('Boa fase: mais músculo, menos gordura','Good phase: more muscle, less fat')
+      : musUp ? T('Músculo a subir','Muscle going up') : fatDn ? T('Gordura a descer','Fat going down')
+      : items.some(i=>i.k==='warn') ? T('Uma coisa a ver hoje','One thing to watch today') : T('Tudo dentro do teu normal','Everything within your normal');
+    return {head, items};
   }
+
+  let bsEl = null;
+  function closeBS(viaPop){
+    if(!bsEl) return; const el = bsEl; bsEl = null;
+    const done = () => { el.remove(); document.body.classList.remove('bs-open'); if(typeof UXFIX==='function') UXFIX(); };
+    if(!viaPop && history.state && history.state.bs) history.back();
+    if(reduce() || !el.animate) return done();
+    el.querySelector('.bs-scrim').animate([{opacity:1},{opacity:0}], {duration:240, fill:'forwards'});
+    el.querySelector('.bs-sheet').animate([{transform:'translateY(0)'},{transform:'translateY(100%)'}], {duration:260, easing:'cubic-bezier(.4,0,1,1)', fill:'forwards'}).onfinish = done;
+  }
+  addEventListener('popstate', () => { if(bsEl) closeBS(true); });
+  function openMorningSheet(){
+    if(bsEl) return;
+    const today = iso(new Date()), L = load(), td = L.find(x => x.date===today);
+    const fld = (k, v) => { const m = byK(k); return '<label>'+m.n+(m.u?' ('+m.u+')':'')+'<input inputmode="decimal" id="bs-'+k+'" value="'+(v!=null?nfx(v, m.d):'')+'" autocomplete="off"></label>'; };
+    const el = document.createElement('div'); el.className = 'bs'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label', T('Pesagem da manhã','Morning weigh-in'));
+    el.innerHTML = '<div class="bs-scrim"></div><div class="bs-sheet"><div class="bs-grab" aria-hidden="true"></div>'
+      +'<div class="rsp bs-top"><small>'+T('Bom dia','Good morning')+' · '+dlong(today)+'</small><div class="rt">'+T('Pesagem da manhã','Morning weigh-in')+'</div><small>'+T('Pesa-te agora, depois da casa de banho e antes de comer ou beber. Só o peso é obrigatório; copia o resto do ecrã da balança.','Weigh yourself now, after the bathroom and before eating or drinking. Only weight is required; copy the rest from the scale screen.')+'</small></div>'
+      +'<div class="bs-body"><div class="frm">'
+      +'<div class="fr2">'+fld('w', td&&td.w)+fld('fat', td&&td.fat)+'</div>'
+      +'<div class="fr2">'+fld('mus', td&&td.mus)+fld('wat', td&&td.wat)+'</div>'
+      +'<div class="fr2">'+fld('bone', td&&td.bone)+fld('bmr', td&&td.bmr)+'</div>'
+      +'<div class="fr2">'+fld('bmi', td&&td.bmi)+'<span></span></div>'
+      +'<div class="tgmsg" id="bs-msg" role="status" aria-live="polite"></div>'
+      +'<button type="button" class="bs-pri" id="bs-save">'+T('Guardar e ver a leitura','Save and see the reading')+'</button>'
+      +'<button type="button" class="bs-sec" id="bs-skip">'+T('Hoje não','Not today')+'</button></div>'
+      +'<p class="sub">'+T('Balança de casa: menos precisa do que a medição da nutricionista. Serve para ver a tendência.','Home scale: less accurate than the nutritionist\'s measurement. Use it for the trend.')+'</p></div></div>';
+    document.body.appendChild(el); document.body.classList.add('bs-open'); bsEl = el;
+    history.pushState(Object.assign({}, history.state, {bs:1}), '');
+    const sheet = el.querySelector('.bs-sheet');
+    if(!reduce() && el.animate){
+      el.querySelector('.bs-scrim').animate([{opacity:0},{opacity:1}], {duration:280});
+      sheet.animate([{transform:'translateY(100%)'},{transform:'translateY(0)'}], {duration:360, easing:'cubic-bezier(.2,.8,.2,1)'});
+    }
+    el.querySelector('.bs-scrim').addEventListener('click', () => closeBS());
+    // puxar para baixo pela pega ou pelo topo fecha
+    let y0 = null, dy = 0;
+    sheet.addEventListener('touchstart', e => { if(sheet.scrollTop>0 || e.target.closest('input,button')){ y0 = null; return; } y0 = e.touches[0].clientY; dy = 0; }, {passive:true});
+    sheet.addEventListener('touchmove', e => { if(y0==null) return; dy = Math.max(0, e.touches[0].clientY - y0); sheet.style.transform = dy ? 'translateY('+dy+'px)' : ''; }, {passive:true});
+    sheet.addEventListener('touchend', () => { if(y0==null) return; y0 = null; if(dy > 110){ sheet.style.transform = ''; closeBS(); } else sheet.style.transform = ''; });
+    el.addEventListener('click', e => {
+      if(e.target.closest('#bs-skip')){ try{ localStorage.setItem(SKIP, today); }catch(x){} closeBS(); return; }
+      if(e.target.closest('#bs-close')){ closeBS(); return; }
+      if(e.target.closest('#bs-go')){ closeBS(); setTimeout(() => { if(typeof showTab==='function') showTab('corpo'); const b = document.getElementById('s-balanca'); if(b) b.scrollIntoView({block:'start'}); }, 300); return; }
+      if(e.target.closest('#bs-save')){
+        const q = id => el.querySelector('#bs-'+id), msg = q('msg'), o = {date:today}; let bad = null;
+        M.forEach(m => { const raw = q(m.k).value.trim(); if(!raw){ if(m.k==='w') bad = bad || m; return; } const v = num(raw); if(!(v>=m.min && v<=m.max)) bad = bad || m; else o[m.k] = v; });
+        if(bad){ msg.className = 'tgmsg err'; msg.textContent = bad.k==='w' && !q('w').value.trim() ? T('Põe pelo menos o peso.','Enter at least the weight.') : T('Valor fora do normal em '+bad.n+' (entre '+bad.min+' e '+bad.max+').','Value out of range for '+bad.n+' ('+bad.min+' to '+bad.max+').'); return; }
+        const L2 = load().filter(x => x.date!==today); L2.push(o); L2.sort((a,b) => a.date.localeCompare(b.date));
+        if(!save(L2)){ msg.className = 'tgmsg err'; msg.textContent = T('Não consegui guardar neste navegador.','Could not save in this browser.'); return; }
+        render(); if(document.activeElement) document.activeElement.blur();
+        const F = readFeedback(L2, today), ico = {good:'✓', warn:'!', info:'i'};
+        el.querySelector('.bs-top').innerHTML = '<small>'+T('Leitura de hoje','Today\'s reading')+' · '+nfx(o.w,1)+' kg</small><div class="rt">'+F.head+'</div>';
+        el.querySelector('.bs-body').innerHTML = '<ul class="bs-fb">'+F.items.map(i => '<li class="'+i.k+'"><span class="bs-ic" aria-hidden="true">'+ico[i.k]+'</span><div><b>'+i.w+'</b><span>'+i.t+'</span></div></li>').join('')+'</ul>'
+          +'<button type="button" class="bs-pri" id="bs-go">'+T('Ver a evolução','See the trend')+'</button><button type="button" class="bs-sec" id="bs-close">'+T('Fechar','Close')+'</button>'
+          +'<p class="sub">'+T('Leitura automática de uma balança de casa: indicação, não diagnóstico.','Automatic reading from a home scale: a pointer, not a diagnosis.')+'</p>';
+        if(!reduce()) el.querySelectorAll('.bs-fb li').forEach((li,i) => li.animate([{opacity:0, transform:'translateY(8px)'},{opacity:1, transform:'none'}], {duration:260, delay:60+i*50, easing:'cubic-bezier(.2,.8,.2,1)', fill:'backwards'}));
+      }
+    });
+  }
+  // ao abrir a app (ou voltar a ela) entre as 6h e as 10h, sem pesagem de hoje: sobe a folha
+  function checkMorning(){ if(!morning() || bsEl || document.querySelector('.gsheet,.det')) return; openMorningSheet(); }
+  window.SCALE.openMorning = openMorningSheet;
   addEventListener('load', () => setTimeout(checkMorning, 60));
   document.addEventListener('visibilitychange', () => { if(!document.hidden) checkMorning(); });
   // ao abrir a página Corpo, o gráfico ajusta-se ao tamanho
