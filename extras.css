@@ -1,0 +1,31 @@
+/* Extras: botões dos formulários fora das Definições, força relativa, plano de velocidade, separadores da Mais, Hoje mais curto */
+/* botões "Guardar" dos formulários do Corpo e da Mais (estavam sem estilo) e campo de data no iPhone */
+.frm .tgbtns,.card .tgbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.tgbtns button.pri{flex:1;min-height:52px;border:0;border-radius:14px;padding:0 20px;font:700 15px Inter,system-ui,sans-serif;cursor:pointer;background:#0E1A2E;color:#fff}
+.tgbtns button.pri:focus-visible{outline:2px solid #D9981A;outline-offset:2px}
+.frm input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%;text-align:left}
+.frm .fr2>label{min-width:0}
+.tgmsg{font-size:13px;font-weight:600;color:#1F5A2B;min-height:18px}
+.tgmsg.err{color:#7A5300}
+/* força relativa */
+#s-forca{margin-top:6px}
+#s-forca .rsp .g.fc-g{grid-template-columns:repeat(2,minmax(0,1fr))}
+#s-forca .fc-g>div{min-width:0}
+#s-forca .fc-g b{font-family:"Barlow Condensed",sans-serif;font-size:32px}
+#s-forca .fc-g b em{font-style:normal;font-size:18px;margin-left:2px;opacity:.8}
+#s-forca .fc-g small.up{color:#5CC48A}
+.fc-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.18);margin:6px 0 4px;overflow:hidden}
+.fc-bar i{display:block;height:100%;border-radius:3px;background:#5CC48A}
+#s-forca .fc-lifts{margin-bottom:8px}
+#s-forca .bt td,#s-forca .bt th{white-space:nowrap}
+#s-isak{margin-top:6px}
+/* plano de velocidade (Hoje) */
+#s-speed{margin-top:14px}
+#s-speed .cvd{font-size:18px;font-weight:600;margin:6px 0 10px;line-height:1.3}
+.sp-plan{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.45}
+/* Hoje: a frase da corrida ao 9 fica à vista, os números ficam dentro do bloco */
+#s-comp .rc-line{font-size:14px;line-height:1.45;margin:0 0 10px}
+#s-comp .rc-fold{margin-top:4px}
+/* Mais em separadores */
+.mais-tabs{margin:14px 0 4px;max-width:100%}
+#pg-mais [hidden],#pg-mais[hidden] *[hidden]{display:none!important}
