@@ -76,7 +76,7 @@
         q('.r1').textContent = dlong(x.d);
         if(st.v==='ratio'){ const z = zone(x.r); q('.gv').innerHTML = x.r==null ? '–' : x.r.toFixed(2).replace('.', EN?'.':','); q('.r3').innerHTML = '<span class="'+z[0]+'">'+z[1]+'</span>'; }
         else { q('.gv').innerHTML = x.rd ? f0(x.rd)+'<em>m</em>' : TT('Descanso','Rest'); q('.r3').innerHTML = x.rd ? '<span class="'+(x.match?'dn':x.rd>HEAVY?'dn':'nt')+'">'+(x.match?TT('Jogo','Match'):x.rd>HEAVY?TT('Dia pesado','Heavy day'):TT('Treino','Training'))+'</span>' : ''; }
-        q('.r4').textContent = x.gap ? TT('Semana sem GPS (Agronomia): fica de fora da conta','Week without GPS: left out of the calculation') : x.xs.length ? x.xs.map(s=>(s.type==='Match'?TT('Jogo','Match'):TT('Treino','Training'))+' '+f0(s.rd)+' m').join(' · ') : TT('Sem sessão com GPS','No GPS session'); };
+        q('.r4').textContent = x.gap ? TT('Semana sem GPS (Agronomia): conta como uma semana normal tua','Week without GPS: counted as one of your normal weeks') : x.xs.length ? x.xs.map(s=>(s.type==='Match'?TT('Jogo','Match'):TT('Treino','Training'))+' '+f0(s.rd)+' m').join(' · ') : TT('Sem sessão com GPS','No GPS session'); };
       const setSel = i => { if(i===st.sel || !R[i]) return; st.sel = i; read(); if(ch) ch.update('none'); };
       const draw = () => {
         R = st.range ? rows.slice(-st.range) : rows; st.sel = R.length-1;
