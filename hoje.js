@@ -60,8 +60,8 @@
     // dias de calendário (setDate, para não escorregar na mudança de hora); começa quando já há 4 semanas de histórico
     const days = [], dd0 = new Date(SESSIONS[0].date+'T12:00:00'); dd0.setDate(dd0.getDate()+27);
     for(const d = dd0; isoDay(d) <= TODAY; d.setDate(d.getDate()+1)) days.push(isoDay(d));
-    const rows = days.map(d => { const ref = {date:d}, m28 = meanRd(28, ref), xs = byDay[d] || [];
-      return {d, r: m28 ? meanRd(7, ref)/m28 : null, rd: xs.reduce((a,x)=>a+x.rd,0), match: xs.some(x=>x.type==='Match'), xs}; });
+    const rows = days.map(d => { const ref = {date:d}, xs = byDay[d] || [];
+      return {d, r: loadRatio(ref), gap: GAP_WEEKS.has(REG.isoWeek(d)), rd: xs.reduce((a,x)=>a+x.rd,0), match: xs.some(x=>x.type==='Match'), xs}; });
     const st = {v:'ratio', range:30, sel:0};
     const html = '<h2>'+TT('Carga dia a dia','Daily load')+'</h2><div class="sub2">'+TT('Carga vs. habitual: últimos 7 dias ÷ média semanal das últimas 4 semanas. Zona segura 0,8 a 1,3.','Load vs. usual: last 7 days ÷ weekly average of the last 4 weeks. Safe zone 0.8 to 1.3.')+'</div>'
       +'<div class="gr" aria-live="polite"><small class="r1"></small><div class="gv"></div><div class="gd r3"></div><small class="r4"></small></div>'
@@ -76,7 +76,7 @@
         q('.r1').textContent = dlong(x.d);
         if(st.v==='ratio'){ const z = zone(x.r); q('.gv').innerHTML = x.r==null ? '–' : x.r.toFixed(2).replace('.', EN?'.':','); q('.r3').innerHTML = '<span class="'+z[0]+'">'+z[1]+'</span>'; }
         else { q('.gv').innerHTML = x.rd ? f0(x.rd)+'<em>m</em>' : TT('Descanso','Rest'); q('.r3').innerHTML = x.rd ? '<span class="'+(x.match?'dn':x.rd>HEAVY?'dn':'nt')+'">'+(x.match?TT('Jogo','Match'):x.rd>HEAVY?TT('Dia pesado','Heavy day'):TT('Treino','Training'))+'</span>' : ''; }
-        q('.r4').textContent = x.xs.length ? x.xs.map(s=>(s.type==='Match'?TT('Jogo','Match'):TT('Treino','Training'))+' '+f0(s.rd)+' m').join(' · ') : TT('Sem sessão com GPS','No GPS session'); };
+        q('.r4').textContent = x.gap ? TT('Semana sem GPS (Agronomia): fica de fora da conta','Week without GPS: left out of the calculation') : x.xs.length ? x.xs.map(s=>(s.type==='Match'?TT('Jogo','Match'):TT('Treino','Training'))+' '+f0(s.rd)+' m').join(' · ') : TT('Sem sessão com GPS','No GPS session'); };
       const setSel = i => { if(i===st.sel || !R[i]) return; st.sel = i; read(); if(ch) ch.update('none'); };
       const draw = () => {
         R = st.range ? rows.slice(-st.range) : rows; st.sel = R.length-1;
@@ -138,12 +138,14 @@
         ? 'Soma dos treinos de equipa desta semana, os mesmos para todos. Outros 9: média de '+nine.length+' scrum-halves. 3/4: média dos outros '+bk.length+' backs do relatório; a percentagem é a tua diferença para eles. Atualiza a cada relatório diário.'
         : 'Outros 9: média de '+nine.length+' scrum-halves. 3/4: média de '+bk.length+' backs da equipa de jogo; a percentagem é a tua diferença para eles. O relatório semanal é dos treinos (sai antes do jogo).';
       // quanto tens de correr a mais do que o 9 titular, que ainda vai somar o jogo
-      let race = '';
+      let race = '', raceLine = '';
       const SG = typeof starterGame==='function' ? starterGame() : null, st = SG && P.rows.find(r=>r.n===SG.name);
       if(SG && st){
         const gm = P.game && P.game.sh.find(x=>x.n===SG.name), gRd = gm ? gm.rd : SG.rd, gHsr = gm ? gm.hsr : SG.hsr, est = !gm;
         const kmS = v => (v>=0?'+':'−')+f1(Math.abs(v)/1000)+' km', mS = v => (v>=0?'+':'−')+f0(Math.abs(v))+' m';
-        const needRd = st.rd + gRd - me.rd, needHsr = st.hsr + gHsr - me.hsr;
+        // os teus jogos desta semana (quando estás nos 23) também contam para ti
+        const myG = SESSIONS.filter(x => x.week===P.week && x.type==='Match'), myRd = myG.reduce((a,x)=>a+x.rd,0), myHsr = myG.reduce((a,x)=>a+x.hsr,0);
+        const needRd = st.rd + gRd - me.rd - myRd, needHsr = st.hsr + gHsr - me.hsr - myHsr;
         const left = P.live ? Math.max(1, 3 - P.days) : 0;   // nas últimas semanas houve 2 a 3 treinos de equipa antes do relatório
         const first = SG.name.split(' ')[0];
         const head = P.live
@@ -152,19 +154,24 @@
         race = '<div class="mb" style="margin-top:14px"><span class="tag">Corrida ao 9 titular · '+SG.name+'</span><p class="cvd">'+head+'</p>'
           +'<div class="cr ch"><span></span><span>Tu</span><span>'+first+'</span><span>Diferença</span></div>'
           +'<div class="cr"><span>Treinos'+(P.live?' até agora':'')+'</span><b>'+f1(me.rd/1000)+'<i> km</i></b><span>'+(P.live?'':'~')+f1(st.rd/1000)+' km</span><span>'+kmS(me.rd-st.rd)+'</span></div>'
-          +'<div class="cr"><span>Jogo'+(est?' (estimado)':'')+'</span><b>–</b><span>'+(est?'~':'')+f1(gRd/1000)+' km</span><span>'+kmS(-gRd)+'</span></div>'
-          +'<div class="cr"><span>Semana</span><b>'+f1(me.rd/1000)+'<i> km</i></b><span>'+f1((st.rd+gRd)/1000)+' km</span><span><b class="'+(needRd<=0?'ok':'')+'" style="font-size:17px">'+kmS(-needRd)+'</b></span></div>'
-          +'<div class="cr"><span>Corrida rápida, semana</span><b>'+f0(me.hsr)+'<i> m</i></b><span>'+f0(st.hsr+gHsr)+' m</span><span>'+mS(-needHsr)+'</span></div>'
+          +'<div class="cr"><span>Jogo'+(est?' (estimado)':'')+'</span><b>'+(myRd?f1(myRd/1000)+'<i> km</i>':'–')+'</b><span>'+(est?'~':'')+f1(gRd/1000)+' km</span><span>'+kmS(myRd-gRd)+'</span></div>'
+          +'<div class="cr"><span>Semana</span><b>'+f1((me.rd+myRd)/1000)+'<i> km</i></b><span>'+f1((st.rd+gRd)/1000)+' km</span><span><b class="'+(needRd<=0?'ok':'')+'" style="font-size:17px">'+kmS(-needRd)+'</b></span></div>'
+          +'<div class="cr"><span>Corrida rápida, semana</span><b>'+f0(me.hsr+myHsr)+'<i> m</i></b><span>'+f0(st.hsr+gHsr)+' m</span><span>'+mS(-needHsr)+'</span></div>'
           +'<div class="sub" style="margin-top:8px">'+(est
             ? 'Jogo estimado: média do 9 que jogou 60 min ou mais nos últimos '+SG.n+' jogos ('+SG.games.map(g=>g.r.n.split(' ')[1]+' '+f1(g.r.rd/1000)+' km, '+g.date.split(' vs ')[1]).join('; ')+'). '
               +(needRd>0 ? 'Se faltarem '+left+' treino'+(left>1?'s':'')+' de equipa, são ~'+f1(needRd/left/1000)+' km a mais do que ele em cada um'+(needHsr>0?', e ~'+f0(needHsr/left)+' m de corrida rápida':'')+'. Os teus treinos extra contam se tiverem GPS.' : '')
-            : 'Jogo real do '+first+' ('+P.game.date+'). Os treinos do relatório semanal são os mesmos para os dois.')+'</div></div>';
+            : 'Jogo real do '+first+' ('+P.game.date+'). Os treinos do relatório semanal são os mesmos para os dois.')+(myRd?' Inclui o teu jogo desta semana.':'')+'</div></div>';
+        // a frase que fica sempre à vista: o que fazer a seguir
+        raceLine = '<p class="rc-line"><b>'+TT('Corrida ao 9 titular','Race to the starting 9')+' ('+first+'):</b> '+(P.live
+          ? (needRd>0 ? 'faltam ~'+f1(needRd/1000)+' km na semana → no próximo treino tenta ~'+f1(needRd/left/1000)+' km a mais do que ele'+(needHsr>0?' (e ~'+f0(needHsr/left)+' m de corrida rápida)':'')+'.' : 'já estás à frente dele na semana, mesmo com o jogo. Mantém.')
+          : (needRd>0 ? 'na semana '+P.week+' ficaste a ~'+f1(needRd/1000)+' km.' : 'na semana '+P.week+' acabaste à frente.'))+'</p>';
       }
       comp = document.createElement('section'); comp.id = 's-comp';
       comp.innerHTML = '<div class="card"><span class="tag">Como me comparo · semana '+P.week+' ('+tag+')</span>'
-       +'<p class="cvd">'+(firsts?'Primeiro dos '+(nine.length+1)+' scrum-halves em '+firsts+' de 4 métricas.':'Atrás dos outros scrum-halves nas 4 métricas.')+'</p>'
+       +'<p class="cvd">'+(firsts?'Primeiro dos '+(nine.length+1)+' scrum-halves em '+firsts+' de 4 métricas.':'Atrás dos outros scrum-halves nas 4 métricas.')+'</p>'+raceLine
+       +'<details class="fold rc-fold"><summary><span>'+TT('Ver os números','See the numbers')+'</span></summary>'
        +'<div class="cr ch"><span></span><span>Tu</span><span>Outros 9</span><span>3/4</span></div>'+M.map(row).join('')
-       +'<div class="sub" style="margin-top:8px">'+foot+'</div>'+race
+       +'<div class="sub" style="margin-top:8px">'+foot+'</div>'+race+'</details>'
        +'<button type="button" class="more-btn" data-go="semana">Ver a semana completa</button></div>';
       sec.after(comp);
       comp.querySelector('.more-btn').addEventListener('click',()=>showTab('semana'));
