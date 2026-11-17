@@ -59,3 +59,5 @@
 @keyframes mpm{0%{transform:scale(.3) rotate(-25deg);opacity:0}60%{transform:scale(1.12) rotate(6deg);opacity:1}100%{transform:none}}
 @media (prefers-reduced-motion: reduce){.mpop,.mp-card,.mp-md,.mpop.out{animation:none}}
 .est-box{border:1px solid rgba(14,26,46,.14);border-radius:14px;padding:12px;margin:4px 0 12px}
+/* ícones Kubai na barra de separadores */
+.tabbar.kubai svg.ki{width:26px;height:26px;overflow:visible}
