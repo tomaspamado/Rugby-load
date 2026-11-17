@@ -42,6 +42,79 @@
    +'<svg class="rs-bars" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Distância das últimas 12 sessões"><line x1="0" x2="'+W+'" y1="'+hy+'" y2="'+hy+'" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 4"/>'+bars+'</svg><div class="cap">'+TT('Últimas 12 sessões · tracejado: dia pesado (3500 m) · vermelho: jogo','Last 12 sessions · dashed: heavy day (3,500 m) · red: match')+'</div>';
   hero.after(sec);
   sec.querySelector('.tt').addEventListener('click',()=>showTab('trofeus'));
+  // a linha da carga abre a carga dia a dia (gráfico em ponto grande)
+  (function(){
+    const g = sec.querySelector('.rs-g'), gl = sec.querySelector('.rs-gl'), cap = gl && gl.nextElementSibling; if(!g || !gl || !cap) return;
+    const box = document.createElement('div'); box.setAttribute('role','button'); box.tabIndex = 0; box.style.cursor = 'pointer';
+    box.setAttribute('aria-label', TT('Abrir a carga dia a dia','Open daily load'));
+    g.before(box); box.append(g, gl, cap);
+    cap.insertAdjacentHTML('beforeend', '<br><span style="opacity:.85;font-weight:600">'+TT('Ver dia a dia ›','See day by day ›')+'</span>');
+    const open = () => openLoad(box);
+    box.addEventListener('click', open); box.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } });
+  })();
+  function openLoad(card){
+    if(!window.GSHEET || !window.Chart) return;
+    const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // um ponto por dia: carga vs. habitual = soma dos últimos 7 dias / (soma dos últimos 28 dias / 4), a mesma regra do resto da app
+    const byDay = {}; SESSIONS.forEach(x => { (byDay[x.date] = byDay[x.date] || []).push(x); });
+    // dias de calendário (setDate, para não escorregar na mudança de hora); começa quando já há 4 semanas de histórico
+    const days = [], dd0 = new Date(SESSIONS[0].date+'T12:00:00'); dd0.setDate(dd0.getDate()+27);
+    for(const d = dd0; isoDay(d) <= TODAY; d.setDate(d.getDate()+1)) days.push(isoDay(d));
+    const rows = days.map(d => { const ref = {date:d}, m28 = meanRd(28, ref), xs = byDay[d] || [];
+      return {d, r: m28 ? meanRd(7, ref)/m28 : null, rd: xs.reduce((a,x)=>a+x.rd,0), match: xs.some(x=>x.type==='Match'), xs}; });
+    const st = {v:'ratio', range:30, sel:0};
+    const html = '<h2>'+TT('Carga dia a dia','Daily load')+'</h2><div class="sub2">'+TT('Carga vs. habitual: últimos 7 dias ÷ média semanal das últimas 4 semanas. Zona segura 0,8 a 1,3.','Load vs. usual: last 7 days ÷ weekly average of the last 4 weeks. Safe zone 0.8 to 1.3.')+'</div>'
+      +'<div class="gr" aria-live="polite"><small class="r1"></small><div class="gv"></div><div class="gd r3"></div><small class="r4"></small></div>'
+      +'<div class="gflt"><div class="seg" role="group" aria-label="'+TT('Vista','View')+'"><button type="button" data-lv="ratio">'+TT('Carga vs. habitual','Load vs. usual')+'</button><button type="button" data-lv="rd">'+TT('Distância por dia','Distance per day')+'</button></div>'
+      +'<div class="seg" role="group" aria-label="'+TT('Período','Period')+'">'+[[30,TT('30 dias','30 days')],[90,TT('90 dias','90 days')],[0,TT('Tudo','All')]].map(([r,l])=>'<button type="button" data-lr="'+r+'">'+l+'</button>').join('')+'</div></div>'
+      +'<div class="cbox"><canvas tabindex="0" role="img"></canvas></div><div class="gl"></div><p class="gh"></p>';
+    window.GSHEET(card, TT('Carga dia a dia','Daily load'), html, root => {
+      let ch = null, R = [];
+      const q = x => root.querySelector(x), canvas = q('canvas');
+      const zone = r => r==null ? ['nt', TT('Sem dados','No data')] : r>1.5 ? ['dn', TT('Muito acima do habitual','Well above usual')] : r>1.3 ? ['dn', TT('Acima da zona segura','Above the safe zone')] : r<0.8 ? ['nt', TT('Abaixo do habitual','Below usual')] : ['up', TT('Na zona segura','In the safe zone')];
+      const read = () => { const x = R[st.sel]; if(!x){ q('.r1').textContent=''; q('.gv').innerHTML=''; q('.r3').innerHTML=''; q('.r4').textContent=''; return; }
+        q('.r1').textContent = dlong(x.d);
+        if(st.v==='ratio'){ const z = zone(x.r); q('.gv').innerHTML = x.r==null ? '–' : x.r.toFixed(2).replace('.', EN?'.':','); q('.r3').innerHTML = '<span class="'+z[0]+'">'+z[1]+'</span>'; }
+        else { q('.gv').innerHTML = x.rd ? f0(x.rd)+'<em>m</em>' : TT('Descanso','Rest'); q('.r3').innerHTML = x.rd ? '<span class="'+(x.match?'dn':x.rd>HEAVY?'dn':'nt')+'">'+(x.match?TT('Jogo','Match'):x.rd>HEAVY?TT('Dia pesado','Heavy day'):TT('Treino','Training'))+'</span>' : ''; }
+        q('.r4').textContent = x.xs.length ? x.xs.map(s=>(s.type==='Match'?TT('Jogo','Match'):TT('Treino','Training'))+' '+f0(s.rd)+' m').join(' · ') : TT('Sem sessão com GPS','No GPS session'); };
+      const setSel = i => { if(i===st.sel || !R[i]) return; st.sel = i; read(); if(ch) ch.update('none'); };
+      const draw = () => {
+        R = st.range ? rows.slice(-st.range) : rows; st.sel = R.length-1;
+        root.querySelectorAll('[data-lv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lv===st.v));
+        root.querySelectorAll('[data-lr]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.lr===st.range));
+        const ratio = st.v==='ratio', labels = R.map(x => dshort(x.d));
+        const band = {id:'lband', beforeDatasetsDraw(c){ const a = c.chartArea, y = c.scales.y, g = c.ctx; g.save();
+          if(ratio){ const y1 = y.getPixelForValue(1.3), y0 = y.getPixelForValue(0.8); g.fillStyle = 'rgba(92,196,138,.16)'; g.fillRect(a.left, Math.max(a.top,y1), a.right-a.left, Math.min(a.bottom,y0)-Math.max(a.top,y1)); }
+          else { const yh = y.getPixelForValue(HEAVY); if(yh>a.top && yh<a.bottom){ g.strokeStyle = 'rgba(255,255,255,.4)'; g.setLineDash([4,4]); g.beginPath(); g.moveTo(a.left,yh); g.lineTo(a.right,yh); g.stroke(); } }
+          g.restore(); },
+          afterDatasetsDraw(c){ const el = c.getDatasetMeta(0).data[st.sel]; if(!el) return; const a = c.chartArea, g = c.ctx; g.save(); g.strokeStyle = '#fff'; g.globalAlpha = .55; g.lineWidth = 1.5; g.setLineDash([4,4]); g.beginPath(); g.moveTo(el.x,a.top); g.lineTo(el.x,a.bottom); g.stroke(); g.restore();
+            if(ratio && R[st.sel].r!=null){ g.save(); g.fillStyle = '#D9981A'; g.strokeStyle = '#0E1A2E'; g.lineWidth = 2.5; g.beginPath(); g.arc(el.x, el.y, 6, 0, 7); g.fill(); g.stroke(); g.restore(); } }};
+        const ds = ratio
+          ? [{data:R.map(x=>x.r), borderColor:'#FFFFFF', borderWidth:2.5, pointRadius:0, pointHoverRadius:0, tension:.3, spanGaps:true}]
+          : [{type:'bar', data:R.map(x=>x.rd||null), backgroundColor:R.map((x,i)=>i===st.sel?'#D9981A':x.match?'#FF6B6B':'rgba(255,255,255,.6)'), borderRadius:4, borderSkipped:false, maxBarThickness:18}];
+        if(ch) ch.destroy();
+        ch = new Chart(canvas, {type: ratio?'line':'bar', data:{labels, datasets:ds}, plugins:[band], options:{responsive:true, maintainAspectRatio:false, animation:{duration:reduce()?0:400},
+          events:['mousemove','mouseout','click','touchstart','touchmove'], interaction:{mode:'index', intersect:false, axis:'x'},
+          onHover:(e,els)=>{ if(els && els.length) { setSel(els[0].index); if(!ratio){ ch.data.datasets[0].backgroundColor = R.map((x,i)=>i===st.sel?'#D9981A':x.match?'#FF6B6B':'rgba(255,255,255,.6)'); ch.update('none'); } } },
+          plugins:{legend:{display:false}, tooltip:{enabled:false}},
+          scales:{x:{ticks:{color:'rgba(255,255,255,.7)', maxRotation:0, autoSkip:true, maxTicksLimit:6, font:{size:11}}, grid:{display:false}},
+                  y:{min:0, suggestedMax: ratio?1.6:4000, ticks:{color:'rgba(255,255,255,.7)', font:{size:11}, maxTicksLimit:5, callback:v => ratio ? v.toFixed(1).replace('.', EN?'.':',') : f1(v/1000)+' km'}, grid:{color:'rgba(255,255,255,.12)', drawTicks:false}, border:{display:false}}}}});
+        q('.gl').innerHTML = ratio
+          ? '<span><i style="background:#fff;height:3px;width:16px;border-radius:2px;vertical-align:3px"></i>'+TT('Carga vs. habitual','Load vs. usual')+'</span><span><i style="background:rgba(92,196,138,.5)"></i>'+TT('Zona segura 0,8–1,3','Safe zone 0.8–1.3')+'</span>'
+          : '<span><i style="background:rgba(255,255,255,.6)"></i>'+TT('Treino','Training')+'</span><span><i style="background:#FF6B6B"></i>'+TT('Jogo','Match')+'</span><span>'+TT('Tracejado: dia pesado (3500 m)','Dashed: heavy day (3,500 m)')+'</span>';
+        q('.gh').textContent = ratio
+          ? TT('Cada ponto é um dia. Sobe nos dias com treino e desce nos dias de descanso. Acima de 1,3 a carga está a subir depressa demais; abaixo de 0,8 estás a treinar menos do que o teu habitual. Toca e arrasta o dedo para ver cada dia.','Each point is a day. It rises on training days and falls on rest days. Above 1.3 load is rising too fast; below 0.8 you are training less than usual. Touch and drag to see each day.')
+          : TT('Metros corridos em cada dia (soma das sessões com GPS). Dias sem barra: descanso ou sem GPS.','Metres run each day (sum of GPS sessions). Days without a bar: rest or no GPS.');
+        canvas.setAttribute('aria-label', TT('Carga dia a dia','Daily load'));
+        read();
+      };
+      root.addEventListener('click', e => { const v = e.target.closest('[data-lv]'), r = e.target.closest('[data-lr]');
+        if(v){ st.v = v.dataset.lv; draw(); } if(r){ st.range = +r.dataset.lr; draw(); } });
+      canvas.addEventListener('keydown', e => { if(e.key==='ArrowLeft'){ e.preventDefault(); setSel(st.sel-1); } else if(e.key==='ArrowRight'){ e.preventDefault(); setSel(st.sel+1); } });
+      draw();
+      return () => { if(ch) ch.destroy(); };
+    });
+  }
   // o que o Coach tem para hoje: toca para abrir
   const fillCoach = () => { const el = document.getElementById('hcoach'); if(!el || !window.COACH || !COACH.status) return; const st = COACH.status();
     el.innerHTML = '<small>'+TT('Coach de hoje','Coach today')+'</small><div>'+st.map(x=>'<button type="button" data-tab="'+x.tab+'" class="'+(x.done?'ok':'')+'">'+(x.done?'✓ ':'')+x.name+'</button>').join('')+'</div>'; };
