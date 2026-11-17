@@ -50,15 +50,57 @@ const POSWK46 = {week:46, final:true,
 
 // ---------- semanas com relatório semanal: uma só lista ----------
 const POSWEEKS = [POSWK, POSWK46];
-function posWeek(w){ if(w==null) return POSWEEKS[POSWEEKS.length-1]; return POSWEEKS.find(p=>p.week===w) || null; }
+
+// ---------- semana em curso: relatórios diários dos Backs, somados até sair o relatório semanal ----------
+// Um bloco por treino (página Backs do PDF do dia). rd arredondado a 100 m nos outros (gráfico), exato nos 3 primeiros e em ti.
+const DAYREPS = [
+  {date:"2026-11-17", week:47, rows:[
+    {n:"Tomás Batista",p:"Defesa",rd:3391,hsr:746,acc:47,sp:29.5},
+    {n:"Diogo Rodrigues",p:"Centro",rd:3114,hsr:627,acc:32,sp:30.0},
+    {n:"Tomás Amado",p:"9",sh:1,me:1,rd:3069,hsr:625,acc:53,sp:29.1},
+    {n:"Manuel Vareiro",p:"Centro",rd:2700,hsr:727,acc:54,sp:28.7},
+    {n:"Vasco Durao",p:"Centro",rd:2700,hsr:585,acc:33,sp:28.1},
+    {n:"Hugo Aubry",p:"Abertura",rd:2600,hsr:593,acc:41,sp:27.4},
+    {n:"Joris Moura",p:"Defesa",rd:2600,hsr:626,acc:29,sp:26.5},
+    {n:"Samuel Marques",p:"9",sh:1,rd:2500,hsr:575,acc:32,sp:26.4},
+    {n:"Hugo Camacho",p:"9",sh:1,rd:2500,hsr:578,acc:20,sp:29.8},
+    {n:"Vincent Pinto",p:"Ponta",rd:2400,hsr:499,acc:20,sp:27.8},
+    {n:"Domingos Cabral",p:"Centro",rd:2400,hsr:522,acc:49,sp:25.4}]}
+];
+// Soma os treinos da semana por jogador (velocidade = a máxima). Só os mesmos treinos de todos, por isso a comparação é justa.
+function liveWeek(w){
+  const ds = DAYREPS.filter(d=>d.week===w); if(!ds.length) return null;
+  const by = {};
+  ds.forEach(d=>d.rows.forEach(r=>{ const o = by[r.n] || (by[r.n] = {n:r.n, p:r.p, sh:r.sh, me:r.me, g:'in', rd:0, hsr:0, acc:0, sp:0, days:0});
+    o.rd += r.rd; o.hsr += r.hsr; o.acc += r.acc; o.sp = Math.max(o.sp, r.sp); o.days++; }));
+  const last = ds[ds.length-1].date.slice(8,10)+'/'+ds[ds.length-1].date.slice(5,7);
+  return {week:w, final:false, live:true, days:ds.length, rows:Object.values(by),
+    note:'Semana '+w+' em curso: soma dos '+ds.length+' treino'+(ds.length>1?'s':'')+' de equipa até '+last+' (relatórios diários dos Backs). Atualiza a cada relatório; o relatório semanal substitui-a.', game:null};
+}
+// posWeek(w): só o relatório semanal (medalhas e página Semana). posWeek() sem semana: a mais recente, incluindo a semana em curso (Hoje).
+function posWeek(w){
+  if(w==null){ const lw = DAYREPS.length ? DAYREPS[DAYREPS.length-1].week : null, last = POSWEEKS[POSWEEKS.length-1];
+    return (lw!=null && lw>last.week) ? liveWeek(lw) : last; }
+  return POSWEEKS.find(p=>p.week===w) || null;
+}
+
+// ---------- o 9 titular no jogo: quanto corre (para saber quanto tens de correr a mais nos treinos) ----------
+// Conta só jogos em que o 9 jogou 60 min ou mais. Titular = o desses jogos mais recente.
+const toMin = s => { const [h,m,x] = String(s).split(':').map(Number); return h*60 + m + (x||0)/60; };
+function starterGame(){
+  const gs = POSWEEKS.filter(p=>p.game).map(p=>({week:p.week, date:p.game.date, r:p.game.sh.filter(x=>toMin(x.min)>=60).sort((a,b)=>toMin(b.min)-toMin(a.min))[0]})).filter(g=>g.r);
+  if(!gs.length) return null;
+  const av = k => gs.reduce((a,g)=>a+g.r[k],0)/gs.length;
+  return {name:gs[gs.length-1].r.n, n:gs.length, rd:av('rd'), hsr:av('hsr'), games:gs};
+}
 
 // ---------- exigência da semana (critério do treinador) ----------
 // Percentil 50 (mediana) e percentil 75 (top 25%) dos outros jogadores do relatório semanal, em distância e corrida rápida.
 // Estar no P75 = pronto para as exigências; acima do P50 = perto. Compara-se sempre a mesma semana: os teus números da semana X
-// com os percentis da semana X. Semana sem relatório (ainda não saiu, ou antes do primeiro): sem percentis, usa os alvos fixos.
+// com os percentis da semana X. Antes de sair o relatório semanal, usa a soma dos relatórios diários da semana (DAYREPS); sem nenhum, os alvos fixos.
 function pctl(xs, p){ const s = xs.slice().sort((a,b)=>a-b), i = (s.length-1)*p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi]-s[lo])*(i-lo); }
 function demandOf(w){
-  const P = posWeek(w); if(!P) return null;
+  const P = POSWEEKS.find(p=>p.week===w) || liveWeek(w); if(!P) return null;   // semana em curso: percentis dos treinos até agora
   const o = P.rows.filter(r => !r.me), me = P.rows.find(r => r.me), q = k => ({p50:pctl(o.map(r=>r[k]), .5), p75:pctl(o.map(r=>r[k]), .75)});
   // os teus números vêm do mesmo relatório (mesmas sessões que os dos outros), não do total da app
   return {week:P.week, n:o.length, rd:q('rd'), hsr:q('hsr'), me: me ? {rd:me.rd, hsr:me.hsr} : null};
