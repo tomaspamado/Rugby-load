@@ -4,7 +4,18 @@
 (function(){
   const ld = (k,d) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v==null ? d : v; }catch(e){ return d; } };
   const sv = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } };
-  const isoWeek = s => { const d = new Date(s+'T00:00:00Z'), n = (d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-n+3); const y = new Date(Date.UTC(d.getUTCFullYear(),0,4)); return 1+Math.round(((d-y)/864e5-3+((y.getUTCDay()+6)%7))/7); };
+  // semana ISO (1–53) e o ano dela
+  const isoWY = s => { const d = new Date(s+'T00:00:00Z'), n = (d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-n+3); const y = new Date(Date.UTC(d.getUTCFullYear(),0,4)); return {y:d.getUTCFullYear(), w:1+Math.round(((d-y)/864e5-3+((y.getUTCDay()+6)%7))/7)}; };
+  // Semana contínua: em 2026 é a semana ISO; depois continua a contar (2026 tem 53 semanas, por isso a semana 1 de 2027 é a 54).
+  // Assim as contas (semana anterior, semana fechada, ordem) não se baralham na viragem do ano. O texto mostra sempre a semana ISO.
+  const BASE_Y = 2026, wkInYear = y => isoWY(y+'-12-28').w;
+  const isoWeek = s => { const o = isoWY(s); let w = o.w; for(let y = BASE_Y; y < o.y; y++) w += wkInYear(y); return w; };
+  const wkLabel = w => { let y = BASE_Y; while(w > wkInYear(y)){ w -= wkInYear(y); y++; } return y===BASE_Y ? String(w) : w+' ('+y+')'; };
+  // rótulos: qualquer "Semana 54" / "Week 54" no ecrã passa a "Semana 1 (2027)"; antes da viragem não muda nada
+  const fixText = t => t.replace(/\b(Semana|semana|Week|week) (\d{2,3})\b/g, (m,a,n) => +n > 53 ? a+' '+wkLabel(+n) : m);
+  const fixNode = n => { if(n.nodeType===3){ const v = fixText(n.nodeValue); if(v!==n.nodeValue) n.nodeValue = v; } else if(n.nodeType===1 && !/^(SCRIPT|STYLE)$/.test(n.tagName)){ const tw = document.createTreeWalker(n, NodeFilter.SHOW_TEXT); let x; while((x = tw.nextNode())){ const v = fixText(x.nodeValue); if(v!==x.nodeValue) x.nodeValue = v; } } };
+  if(isoWeek(new Date().toISOString().slice(0,10)) > 53) addEventListener('DOMContentLoaded', () => { fixNode(document.body);
+    new MutationObserver(ms => ms.forEach(m => { if(m.type==='characterData') fixNode(m.target); else m.addedNodes.forEach(fixNode); })).observe(document.body, {subtree:true, childList:true, characterData:true}); });
 
   // sessões adicionadas na app
   const EXTRA = ld('extra_sessions', []).filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && x.rd>0);
@@ -23,7 +34,7 @@
 
   // chaves que a cópia de segurança leva
   const KEYS = ['targets','lang','extra_sessions','next_match','body_extra','coach_log','coach_custom','coach_plank_pb','coach_target','coach_seed1','coach_seed2'];
-  window.REG = {isoWeek, KEYS, ld, sv};
+  window.REG = {isoWeek, wkLabel, KEYS, ld, sv};
 
   addEventListener('DOMContentLoaded', () => {
     const {en: EN, t: T} = I18N;
