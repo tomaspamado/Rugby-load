@@ -82,4 +82,44 @@
     window.MAIS_TAB = show;
   }
   addEventListener('DOMContentLoaded', maisTabs);
+  // ---- 4) Medalha nova: aviso quando ganhas uma medalha ----
+  // Guarda as medalhas já vistas ('medals_seen'). Na primeira vez só regista as que já tens, sem aviso.
+  // Espera que não haja outra janela aberta (ex.: pesagem da manhã) antes de aparecer.
+  function medalPop(){
+    const TR = window.TROFEUS; if(!TR || !TR.medals) return;
+    const id = m => m.k+'|'+m.tier+'|'+m.date+'|'+m.week;
+    let seen = null; try{ seen = JSON.parse(localStorage.getItem('medals_seen')); }catch(e){}
+    const all = TR.medals.map(id);
+    const save = () => { try{ localStorage.setItem('medals_seen', JSON.stringify(all)); localStorage.setItem('level_seen', String(TR.levelNo)); }catch(e){} };
+    if(!Array.isArray(seen)){ save(); return; }
+    const S = new Set(seen), fresh = TR.medals.filter(m => !S.has(id(m)));
+    if(!fresh.length){ save(); return; }
+    let lvSeen = 0; try{ lvSeen = +localStorage.getItem('level_seen') || 0; }catch(e){}
+    const up = lvSeen && TR.levelNo > lvSeen;
+    const TC = {gold:'#C99A1E', silver:'#8D98A8', bronze:'#A8693A', base:'#1F3B63'}, TN = {gold:T('Ouro','Gold'), silver:T('Prata','Silver'), bronze:'Bronze', base:''};
+    const icon = m => { const md = document.querySelector('#s-trofeus .md[data-k="'+m.k+'"]'), sv = md && md.querySelector('svg');
+      if(!sv) return ''; const c = sv.cloneNode(true); c.classList.remove('lk'); const ci = c.querySelector('circle'); if(ci) ci.setAttribute('fill', TC[m.tier]||TC.base); return c.outerHTML; };
+    const name = m => { const b = document.querySelector('#s-trofeus .md[data-k="'+m.k+'"] b'); return b ? b.textContent : m.k; };
+    const show = () => {
+      if(document.querySelector('[role=dialog][aria-modal=true]')){ setTimeout(show, 1200); return; }
+      const top = fresh.slice().sort((a,b) => ['base','bronze','silver','gold'].indexOf(b.tier)-['base','bronze','silver','gold'].indexOf(a.tier))[0];
+      const el = document.createElement('div'); el.className = 'mpop'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-labelledby','mp-t');
+      el.innerHTML = '<div class="mp-card"><div class="mp-glow" aria-hidden="true"></div><div class="mp-md">'+icon(top)+'</div>'
+        +'<small>'+(fresh.length>1 ? fresh.length+T(' medalhas novas',' new medals') : T('Medalha nova','New medal'))+'</small>'
+        +'<h2 id="mp-t">'+name(top)+(TN[top.tier]?' · '+TN[top.tier]:'')+'</h2>'
+        +(top.note ? '<p class="mp-n">'+top.note+'</p>' : '')
+        +(fresh.length>1 ? '<ul class="mp-l">'+fresh.filter(m=>m!==top).map(m => '<li>'+icon(m)+'<span>'+name(m)+(TN[m.tier]?' · '+TN[m.tier]:'')+'</span></li>').join('')+'</ul>' : '')
+        +'<p class="mp-lv">'+(up ? T('Subiste de nível: ','Level up: ')+'<b>'+TR.level+'</b>' : T('Nível ','Level ')+TR.level)+' · '+TR.pts+T(' pontos',' points')+'</p>'
+        +'<div class="mp-b"><button type="button" class="mp-go">'+T('Ver troféus','See trophies')+'</button><button type="button" class="mp-ok">'+T('Fixe!','Nice!')+'</button></div></div>';
+      document.body.appendChild(el); save();
+      const close = go => { el.classList.add('out'); setTimeout(() => el.remove(), matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 200); if(go) showTab('trofeus'); };
+      el.querySelector('.mp-ok').addEventListener('click', () => close(false));
+      el.querySelector('.mp-go').addEventListener('click', () => close(true));
+      el.addEventListener('click', e => { if(e.target===el) close(false); });
+      el.addEventListener('keydown', e => { if(e.key==='Escape') close(false); });
+      el.querySelector('.mp-ok').focus();
+    };
+    setTimeout(show, 700);
+  }
+  addEventListener('load', medalPop);
 })();
