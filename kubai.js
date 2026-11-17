@@ -26,3 +26,9 @@
   };
   if(document.readyState==='loading') addEventListener('DOMContentLoaded', go); else go();
 })();
+// Corpo voltou à barra de baixo: tira o atalho "Composição corporal" da Mais e o botão "‹ Mais" do Corpo (criados pelo coach.js)
+addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#pg-mais .more-link[data-go="corpo"]').forEach(b => b.remove());
+  const corpo = document.getElementById('pg-corpo'), bk = corpo && corpo.firstElementChild;
+  if(bk && bk.classList.contains('more-btn') && /Mais|More/.test(bk.textContent)) bk.remove();
+});
