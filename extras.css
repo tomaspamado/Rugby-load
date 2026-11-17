@@ -61,6 +61,9 @@
 .est-box{border:1px solid rgba(14,26,46,.14);border-radius:14px;padding:12px;margin:4px 0 12px}
 /* ícones Kubai na barra de separadores: cores da app (azul-marinho em repouso, vermelho de Portugal no separador aberto), nada de cinzento nem verde */
 :root{--tb-ic:#1F4E8C;--tb-tx:#0E1A2E;--tb-on:#D7263D}
+.tabbar button{color:var(--tb-tx)}
+.tabbar button svg,.tabbar button.on svg{color:var(--tb-ic)}
+.tabbar button.on,.tabbar button.on svg{color:var(--tb-on)}
 .tabbar.kubai svg.ki{width:26px;height:26px;overflow:visible}
 .tabbar.kubai button{color:var(--tb-tx)}
 .tabbar.kubai button svg,.tabbar.kubai button.on svg{color:var(--tb-ic)}
@@ -69,3 +72,8 @@
 .tabbar.kubai button.on svg{color:var(--tb-on)}
 .tabbar.kubai button.on span{opacity:1;font-weight:700}
 #pg-evol #s-jogos{margin-top:28px}
+/* Corpo em separadores */
+.corpo-tabs{margin:4px 0 10px;width:100%;display:flex}
+.corpo-tabs button{flex:1}
+#pg-corpo [hidden]{display:none!important}
+#bodycard > .todo{margin-top:0}
