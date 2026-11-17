@@ -8,10 +8,28 @@
   const {en: EN, t: T} = I18N;
   const KEY = 'strength_log', LKEY = 'strength_lifts';
   const DEF = [
-    {k:'bp', n:'Bench press', g:1.25, bw:false},
-    {k:'bs', n:'Box squat',   g:1.75, bw:false},
-    {k:'pu', n:'Pull-up c/ peso', g:1.4, bw:true}
+    {k:'bp', n:'Bench press', g:1.4, bw:false},
+    {k:'bs', n:'Box squat',   g:2.0, bw:false},
+    {k:'pu', n:'Pull-up c/ peso', g:1.5, bw:true}
   ];
+  // Alvos por defeito = nível de backs profissionais/internacionais (máximo a 1 repetição ÷ peso):
+  // bench 1,4× e pull-up 1,5× no total (peso + extra, ou seja +0,5× de extra): backs do Super Rugby (Sports 2020, 8:85: 1,41 e 1,50)
+  // e o nível "Elite" de Jack Tyler (bench 1,4×, chin-up +0,5×). Agachamento: backs do Super Rugby 1,86× e "Elite" 1,8× em back squat;
+  // o box squat costuma permitir um pouco mais de carga, por isso 2,0×.
+  // Registos iniciais (que deste): bench 110 kg e box squat 200 kg a 1 repetição, no início da pré-época (25/08/2026).
+  (function seed(){
+    try{
+      if(localStorage.getItem('strength_seed1')) return;
+      const OLD = {bp:1.25, bs:1.75, pu:1.4}, NEW = {bp:1.4, bs:2.0, pu:1.5};
+      const ls = JSON.parse(localStorage.getItem('strength_lifts') || 'null');
+      if(Array.isArray(ls)){ ls.forEach(l => { if(OLD[l.k]!=null && +l.g===OLD[l.k]) l.g = NEW[l.k]; }); localStorage.setItem('strength_lifts', JSON.stringify(ls)); }
+      const log = JSON.parse(localStorage.getItem('strength_log') || '[]') || [];
+      const add = (id, l, kg) => { if(!log.some(x => x.l===l && x.date==='2026-08-25' && +x.kg===kg)) log.push({id, date:'2026-08-25', l, kg, reps:1}); };
+      add(1756080000001, 'bp', 110); add(1756080000002, 'bs', 200);
+      localStorage.setItem('strength_log', JSON.stringify(log));
+      localStorage.setItem('strength_seed1', '1');
+    }catch(e){}
+  })();
   const ld = (k,d) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v==null ? d : v; }catch(e){ return d; } };
   const sv = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } };
   if(window.REG && REG.KEYS) [KEY, LKEY].forEach(k => { if(!REG.KEYS.includes(k)) REG.KEYS.push(k); });
@@ -41,12 +59,12 @@
   function render(){
     LIFTS = lifts(); if(!LIFTS.some(l=>l.k===lift)) lift = LIFTS[0].k;
     const L = load(), G = Object.fromEntries(LIFTS.map(l=>[l.k,+l.g])), W = bw(), today = iso(new Date());
-    const cut = new Date(); cut.setDate(cut.getDate()-90); const c90 = iso(cut);
+    const now = new Date(), c90 = (now.getMonth()>=6 ? now.getFullYear() : now.getFullYear()-1)+'-07-01';   // esta época: desde 1 de julho
     const best = k => { const xs = L.filter(x => x.l===k && x.date>=c90 && x.reps<=10); if(!xs.length) return null; return xs.reduce((a,x) => e1rm(x)>e1rm(a) ? x : a); };
     const rows = LIFTS.map(l => { const b = best(l.k), r = b ? e1rm(b)/W : null; return {l, b, r, g:G[l.k], gap: b ? Math.max(0, G[l.k]*W - e1rm(b)) : null}; });
     const done = rows.filter(x => x.r!=null && x.r>=x.g).length, have = rows.filter(x => x.r!=null).length;
     let h = '<h2>'+T('Força relativa','Relative strength')+'</h2><div class="sub">'+T('O teu máximo estimado a dividir pelo peso, contra os teus objetivos. Peso usado: ','Your estimated max divided by bodyweight, against your goals. Weight used: ')+nfx(W,1)+' kg ('+bwSrc()+').</div>';
-    h += '<div class="rsp"><small>'+(have ? T('Últimos 90 dias','Last 90 days') : T('Ainda sem séries registadas','No sets logged yet'))+'</small><div class="rt">'+(have ? done+T(' de ',' of ')+LIFTS.length+T(' objetivos',' goals') : T('Regista a primeira série','Log your first set'))+'</div>'
+    h += '<div class="rsp"><small>'+(have ? T('Melhor desta época','Best this season') : T('Ainda sem séries registadas','No sets logged yet'))+'</small><div class="rt">'+(have ? done+T(' de ',' of ')+LIFTS.length+T(' objetivos',' goals') : T('Regista a primeira série','Log your first set'))+'</div>'
       +'<div class="g fc-g">'+rows.map(x => '<div><small>'+esc(x.l.n)+'</small><b>'+(x.r!=null ? nfx(x.r,2)+'<em>×</em>' : '–')+'</b>'
         +'<div class="fc-bar" role="img" aria-label="'+esc(x.l.n)+': '+(x.r!=null?nfx(x.r,2):'–')+' de '+gf(x.g)+'"><i style="width:'+(x.r!=null?Math.min(100, x.r/x.g*100).toFixed(1):0)+'%"></i></div>'
         +'<small class="'+(x.r!=null && x.r>=x.g ? 'up' : '')+'">'+(x.r==null ? T('alvo ','goal ')+gf(x.g)+'×' : x.r>=x.g ? T('✓ alvo ','✓ goal ')+gf(x.g)+'×' : T('alvo ','goal ')+gf(x.g)+'× · '+T('faltam ~','~')+Math.ceil(x.gap)+' kg'+T('',' to go'))+'</small></div>').join('')+'</div>'
