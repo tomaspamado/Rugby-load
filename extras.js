@@ -122,4 +122,38 @@
     setTimeout(show, 700);
   }
   addEventListener('load', medalPop);
+  // ---- 5) Treino sem GPS: estimar a carga pela duração e pelo esforço (RPE) ----
+  // Calibrado com os teus treinos com GPS: distância média por treino ÷ duração habitual = metros por minuto num treino normal (RPE 6).
+  // Esforço mais alto ou mais baixo escala os metros por minuto (RPE 3 ≈ 0,7×, RPE 10 ≈ 1,4×). Num jogo usa os teus metros por minuto em jogo.
+  // Corrida rápida e acelerações seguem a tua proporção habitual por metro. A velocidade máxima fica abaixo do alvo (não dá medalhas).
+  function estimator(){
+    const f = document.getElementById('addsess'); if(!f) return;
+    const card = f.querySelector('.frm'), first = card && card.querySelector('.fr2'); if(!first) return;
+    const tr = SESSIONS.filter(x => x.type!=='Match' && !x.est && !x.added && !x.combined && !x.shortSession);
+    const mt = SESSIONS.filter(x => x.type==='Match' && x.fieldTimeMin>=30 && !x.added);
+    const av = (a,fn) => a.length ? a.reduce((t,x)=>t+fn(x),0)/a.length : null;
+    const rdT = av(tr, x=>x.rd) || 2400, hsrR = av(tr, x=>x.hsr/x.rd) || .25, accM = av(tr, x=>x.accel/x.rd) || .017, spT = av(tr, x=>x.maxSpeed) || 27.5, mpmM = av(mt, x=>x.rd/x.fieldTimeMin) || 60;
+    let dur = 75; try{ dur = +localStorage.getItem('train_min') || 75; }catch(e){}
+    const box = document.createElement('div'); box.className = 'est-box';
+    box.innerHTML = '<b>'+T('Sem GPS? Estima pela duração e pelo esforço','No GPS? Estimate from duration and effort')+'</b>'
+      +'<div class="sub" style="margin:2px 0 8px">'+T('RPE: o esforço de 1 (muito leve) a 10 (máximo). Preenche a distância, a corrida rápida e as acelerações por ti; podes corrigir antes de guardar.','RPE: effort from 1 (very easy) to 10 (max). Fills distance, fast running and accelerations for you; you can correct them before saving.')+'</div>'
+      +'<div class="fr2"><label>'+T('Minutos de treino','Minutes')+'<input inputmode="numeric" id="es-min" autocomplete="off"></label><label>RPE (1–10)<input inputmode="numeric" id="es-rpe" autocomplete="off"></label></div>'
+      +'<details class="more"><summary>'+T('Calibração','Calibration')+'</summary><div class="sub" style="margin:6px 0">'+T('Um treino teu com GPS tem em média ','Your GPS training sessions average ')+nfx(rdT/1000,1)+' km. '+T('Quanto dura, normalmente?','How long do they usually last?')+'</div><div class="fr2"><label>'+T('Duração habitual (min)','Usual duration (min)')+'<input inputmode="numeric" id="es-dur" value="'+dur+'"></label><span></span></div></details>'
+      +'<div class="tgbtns"><button type="button" class="fc-sec" id="es-go">'+T('Estimar','Estimate')+'</button></div><div class="tgmsg" id="es-msg" role="status" aria-live="polite"></div>';
+    first.before(box);
+    const q = id => f.querySelector('#'+id), num = v => parseFloat(String(v).replace(',','.'));
+    q('es-go').addEventListener('click', () => {
+      const min = num(q('es-min').value), rpe = Math.round(num(q('es-rpe').value)), d = num(q('es-dur').value), msg = q('es-msg');
+      if(!(min>0 && min<=240) || !(rpe>=1 && rpe<=10)){ msg.className = 'tgmsg err'; msg.textContent = T('Põe os minutos (até 240) e o RPE de 1 a 10.','Enter minutes (up to 240) and RPE from 1 to 10.'); return; }
+      if(d>=20 && d<=240){ try{ localStorage.setItem('train_min', String(d)); }catch(e){} }
+      const match = q('as-type').value==='Match', k = 0.4 + 0.1*rpe;
+      const rd = match ? mpmM*min*Math.min(1, k/1.3) : (rdT/(d>=20&&d<=240?d:dur))*min*k;
+      const hsr = rd*hsrR*Math.max(.3, Math.min(1.6, rpe/6)), acc = rd*accM*(0.7+0.05*rpe), sp = Math.min(spT, MAXREF*spdPct()-0.5);
+      q('as-rd').value = Math.round(rd); q('as-hsr').value = Math.round(hsr); q('as-acc').value = Math.round(acc); q('as-sp').value = sp.toFixed(1).replace('.', EN?'.':',');
+      q('as-est').checked = true; if(match && q('as-min')) q('as-min').value = Math.round(min);
+      const note = q('as-note'); if(note && !note.value) note.value = 'RPE '+rpe+' · '+Math.round(min)+' min · '+T('estimado sem GPS','estimated without GPS');
+      msg.className = 'tgmsg'; msg.textContent = T('✓ Estimativa: ~','✓ Estimate: ~')+nfx(rd/1000,1)+' km, ~'+Math.round(hsr)+' m '+T('de corrida rápida','fast running')+' (sRPE '+rpe*Math.round(min)+'). '+T('Confere e carrega em Guardar sessão.','Check and tap Save session.');
+    });
+  }
+  addEventListener('DOMContentLoaded', estimator);
 })();
