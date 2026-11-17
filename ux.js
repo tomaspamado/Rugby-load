@@ -30,6 +30,17 @@
   addEventListener('pageshow', UXFIX); addEventListener('orientationchange', UXFIX);
   document.addEventListener('visibilitychange', () => { if(!document.hidden) UXFIX(); });
 
+  // ---- Coach: a linha de separadores mantém o deslocamento lateral ao trocar de separador ----
+  // (o Coach redesenha a página ao tocar num separador; guarda-se o deslocamento antes e repõe-se depois)
+  let segX = null;
+  document.addEventListener('click', e => { const sg = e.target.closest && e.target.closest('#pg-coach .cseg'); segX = sg ? sg.scrollLeft : null; }, true);
+  document.addEventListener('click', () => {
+    if(segX==null) return; const sg = document.querySelector('#pg-coach .cseg'), x = segX; segX = null; if(!sg) return;
+    sg.scrollLeft = x; const on = sg.querySelector('[aria-pressed="true"]'); if(!on) return;
+    const l = on.offsetLeft - sg.offsetLeft, r = l + on.offsetWidth, pad = 16;   // se o escolhido ficar cortado, desliza só o necessário
+    if(l < sg.scrollLeft) sg.scrollLeft = Math.max(0, l - pad); else if(r > sg.scrollLeft + sg.clientWidth) sg.scrollLeft = r - sg.clientWidth + pad;
+  });
+
   // ---- Follow through: barras de progresso crescem com ressalto quando a página aparece ----
   function growBars(root){
     if(reduce()) return;
