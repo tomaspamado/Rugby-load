@@ -15,12 +15,18 @@ const teamOf = s => s.team || 'Seleção';
 const TEAMS = ['Seleção','Lusitanos'];
 
 // carga vs. habitual: soma dos últimos 7 dias / (soma dos últimos 28 dias / 4). Uma só definição para toda a app.
+// Semanas sem GPS (gpsGap, ex.: Agronomia) não contam: os dias delas saem da janela e a média usa só os dias com GPS.
+// Assim uma semana sem dados não baixa o habitual nem faz a carga parecer a subir nas semanas seguintes.
+const GAP_WEEKS = new Set(SESSIONS.filter(s=>s.gpsGap).map(s=>s.week));
 function meanRd(days, ref){
-  const end = new Date(ref.date+'T00:00:00').getTime();
-  const xs = SESSIONS.filter(s=>{const t=new Date(s.date+'T00:00:00').getTime(); return end-t < days*DAY && t<=end;});
-  const sum = xs.reduce((a,s)=>a+s.rd,0);
-  return days===28 ? sum/4 : sum;
+  const end = new Date(ref.date+'T12:00:00');
+  let valid = 0, sum = 0;
+  for(let i=0;i<days;i++){ const d = new Date(end); d.setDate(d.getDate()-i); const k = isoDay(d);
+    if(GAP_WEEKS.has(REG.isoWeek(k))) continue; valid++; SESSIONS.forEach(s=>{ if(s.date===k) sum += s.rd; }); }
+  if(!valid) return null;
+  return days===28 ? sum/(valid/7) : sum*7/valid;
 }
+const loadRatio = ref => { const m28 = meanRd(28,ref), a7 = meanRd(7,ref); return m28 && a7!=null ? a7/m28 : null; };
 
 // ---------- decisão do dia (uma só regra para o Hoje e o Coach) ----------
 const isoDay = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -30,7 +36,7 @@ function dayPlan(t){
   t = t || isoDay(new Date());
   const past = SESSIONS.filter(x=>x.date<=t), s = past.length ? past[past.length-1] : last;
   const dd = Math.max(0, Math.round((new Date(t+'T00:00:00')-new Date(s.date+'T00:00:00'))/DAY));
-  const hard = s.type==='Match' || s.rd>HEAVY, m28 = meanRd(28,s), ratio = m28 ? meanRd(7,s)/m28 : null;
+  const hard = s.type==='Match' || s.rd>HEAVY, ratio = loadRatio(s);
   const nm = window.NEXT_MATCH || null, dm = nm ? Math.round((new Date(nm.date+'T00:00:00')-new Date(t+'T00:00:00'))/DAY) : null;
   let k = 'normal';
   if(dm===0) k = 'match'; else if(hard && dd===0) k = 'same'; else if(hard && dd===1) k = 'next'; else if(dm===1) k = 'pre';
@@ -103,7 +109,7 @@ function renderLatest(s){
 
   const heavy = s.rd > HEAVY;
   const load = heavy ? {k:'bad', b:'Dia pesado', t:'Mais de ~3500 m'} : s.rd > 3000 ? {k:'warn', b:'Carga alta', t:'Entre 3000 e 3500 m'} : {k:'good', b:'Carga normal', t:'Abaixo de 3000 m'};
-  const ac = meanRd(7,s), ch = meanRd(28,s), ratio = ac/ch;
+  const ac = meanRd(7,s), ch = meanRd(28,s), ratio = loadRatio(s);
   let wk = ratio > 1.3 ? {k:'warn', b:'Mais pesada', t:'Semana acima do teu habitual'} : ratio < 0.8 ? {k:'info', b:'Mais leve', t:'Semana abaixo do teu habitual'} : {k:'good', b:'Habitual', t:'Semana dentro do teu normal'};
   if (SESSIONS.filter(x=>x.week===s.week && x.date<=s.date).length===1) wk = {k:'info', b:'Semana a começar', t:'Ainda só 1 sessão com GPS esta semana'};
   const gapNear = SESSIONS.some(x=>x.gpsGap && (new Date(s.date)-new Date(x.date))/DAY>=0 && (new Date(s.date)-new Date(x.date))/DAY<=7);
@@ -379,10 +385,10 @@ function renderLoad(){
   const end=new Date(last.date+'T00:00:00').getTime(), within=d=>SESSIONS.filter(x=>{const t=new Date(x.date+'T00:00:00').getTime();return t<=end && end-t<d*DAY;});
   const a7=within(7), c28=within(28);
   const sum=(xs,k)=>xs.reduce((t,x)=>t+x[k],0);
-  const ac=sum(a7,'rd'), ch=sum(c28,'rd')/4, ratio=ch?ac/ch:null;
+  const ac=meanRd(7,last)||0, ch=meanRd(28,last)||0, ratio=loadRatio(last);
   const gap=SESSIONS.some(x=>x.gpsGap && end-new Date(x.date+'T00:00:00').getTime()<28*DAY);
   let z; if(ratio==null) z={k:'info',b:'Sem dados',t:''}; else if(ratio>1.5) z={k:'bad',b:'Carga a subir demasiado',t:'Semana muito acima do teu habitual: poupa o próximo treino e recupera bem.'}; else if(ratio>1.3) z={k:'warn',b:'Carga alta',t:'Acima do teu habitual: cuida do sono, da comida e da recuperação.'}; else if(ratio>=0.8) z={k:'good',b:'Zona segura',t:'Carga dentro do que o teu corpo está habituado.'}; else z={k:'info',b:'Carga baixa',t:'Abaixo do habitual: há margem para treinar mais, se te sentires bem.'};
-  if(gap) z.t+=' Atenção: houve treinos sem GPS (Agronomia), por isso o valor pode estar subestimado.';
+  if(gap) z.t+=' Houve uma semana sem GPS (Agronomia): fica de fora da conta, o habitual usa só as semanas com GPS.';
   const heavy=a7.filter(x=>x.rd>HEAVY).length, matches=a7.filter(x=>x.type==='Match').length;
   const goal=MAXREF*spdPct(), sp=SESSIONS.filter(x=>x.maxSpeed>=goal), lastSp=sp.length?sp[sp.length-1]:null;
   const dsp=lastSp?Math.round((end-new Date(lastSp.date+'T00:00:00').getTime())/DAY):null;
