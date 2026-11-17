@@ -15,9 +15,10 @@ const teamOf = s => s.team || 'Seleção';
 const TEAMS = ['Seleção','Lusitanos'];
 
 // carga vs. habitual: soma dos últimos 7 dias / (soma dos últimos 28 dias / 4). Uma só definição para toda a app.
-// Semanas sem GPS (gpsGap, ex.: Agronomia) não contam: os dias delas saem da janela e a média usa só os dias com GPS.
-// Assim uma semana sem dados não baixa o habitual nem faz a carga parecer a subir nas semanas seguintes.
-const GAP_WEEKS = new Set(SESSIONS.filter(s=>s.gpsGap).map(s=>s.week));
+// Semanas sem GPS (gpsGap, ex.: Agronomia): treinaste na mesma, só não há metros. Contam como uma semana normal tua:
+// os dias sem dados valem a tua média dos outros dias da janela (em vez de 0, que baixava o habitual de forma falsa).
+// Se adicionares em Mais as sessões dessa semana (com valores estimados), passam a contar os teus números em vez da média.
+const GAP_WEEKS = new Set(SESSIONS.filter(s=>s.gpsGap && !SESSIONS.some(x=>x.added && x.week===s.week)).map(s=>s.week));
 function meanRd(days, ref){
   const end = new Date(ref.date+'T12:00:00');
   let valid = 0, sum = 0;
@@ -386,9 +387,9 @@ function renderLoad(){
   const a7=within(7), c28=within(28);
   const sum=(xs,k)=>xs.reduce((t,x)=>t+x[k],0);
   const ac=meanRd(7,last)||0, ch=meanRd(28,last)||0, ratio=loadRatio(last);
-  const gap=SESSIONS.some(x=>x.gpsGap && end-new Date(x.date+'T00:00:00').getTime()<28*DAY);
+  const gap=SESSIONS.some(x=>GAP_WEEKS.has(x.week) && end-new Date(x.date+'T00:00:00').getTime()<28*DAY);
   let z; if(ratio==null) z={k:'info',b:'Sem dados',t:''}; else if(ratio>1.5) z={k:'bad',b:'Carga a subir demasiado',t:'Semana muito acima do teu habitual: poupa o próximo treino e recupera bem.'}; else if(ratio>1.3) z={k:'warn',b:'Carga alta',t:'Acima do teu habitual: cuida do sono, da comida e da recuperação.'}; else if(ratio>=0.8) z={k:'good',b:'Zona segura',t:'Carga dentro do que o teu corpo está habituado.'}; else z={k:'info',b:'Carga baixa',t:'Abaixo do habitual: há margem para treinar mais, se te sentires bem.'};
-  if(gap) z.t+=' Houve uma semana sem GPS (Agronomia): fica de fora da conta, o habitual usa só as semanas com GPS.';
+  if(gap) z.t+=' Houve uma semana sem GPS (Agronomia): conta como uma semana normal tua (a tua média), não como zero. Se quiseres os números reais, adiciona essas sessões em Mais › Sessões.';
   const heavy=a7.filter(x=>x.rd>HEAVY).length, matches=a7.filter(x=>x.type==='Match').length;
   const goal=MAXREF*spdPct(), sp=SESSIONS.filter(x=>x.maxSpeed>=goal), lastSp=sp.length?sp[sp.length-1]:null;
   const dsp=lastSp?Math.round((end-new Date(lastSp.date+'T00:00:00').getTime())/DAY):null;
