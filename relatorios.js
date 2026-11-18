@@ -65,7 +65,21 @@ const DAYREPS = [
     {n:"Samuel Marques",p:"9",sh:1,rd:2500,hsr:575,acc:32,sp:26.4},
     {n:"Hugo Camacho",p:"9",sh:1,rd:2500,hsr:578,acc:20,sp:29.8},
     {n:"Vincent Pinto",p:"Ponta",rd:2400,hsr:499,acc:20,sp:27.8},
-    {n:"Domingos Cabral",p:"Centro",rd:2400,hsr:522,acc:49,sp:25.4}]}
+    {n:"Domingos Cabral",p:"Centro",rd:2400,hsr:522,acc:49,sp:25.4}]},
+  {date:"2026-11-18", week:47, rows:[
+    {n:"Tomás Batista",p:"Defesa",rd:3266,hsr:794,acc:31,sp:27.9},
+    {n:"Joris Moura",p:"Defesa",rd:3246,hsr:962,acc:45,sp:28.2},
+    {n:"Tomás Amado",p:"9",sh:1,me:1,rd:3227,hsr:1162,acc:62,sp:30.9},
+    {n:"Raffaele Storti",p:"Ponta",rd:2900,hsr:939,acc:32,sp:30.7},
+    {n:"Diogo Rodrigues",p:"Centro",rd:2800,hsr:871,acc:57,sp:29.1},
+    {n:"Samuel Marques",p:"9",sh:1,rd:2700,hsr:825,acc:35,sp:31.1},
+    {n:"Vasco Durao",p:"Centro",rd:2700,hsr:617,acc:42,sp:29.4},
+    {n:"Vincent Pinto",p:"Ponta",rd:2700,hsr:811,acc:37,sp:27.7},
+    {n:"Hugo Camacho",p:"9",sh:1,rd:2700,hsr:546,acc:31,sp:27.8},
+    {n:"Domingos Cabral",p:"Centro",rd:2600,hsr:672,acc:59,sp:28.4},
+    {n:"Manuel Vareiro",p:"Centro",rd:2600,hsr:845,acc:49,sp:31.5},
+    {n:"Hugo Aubry",p:"Abertura",rd:2500,hsr:511,acc:40,sp:29.8},
+    {n:"Tomás Appleton",p:"Centro",rd:2500,hsr:530,acc:55,sp:25.7}]}
 ];
 // Soma os treinos da semana por jogador (velocidade = a máxima). Só os mesmos treinos de todos, por isso a comparação é justa.
 function liveWeek(w){
@@ -74,7 +88,8 @@ function liveWeek(w){
   ds.forEach(d=>d.rows.forEach(r=>{ const o = by[r.n] || (by[r.n] = {n:r.n, p:r.p, sh:r.sh, me:r.me, g:'in', rd:0, hsr:0, acc:0, sp:0, days:0});
     o.rd += r.rd; o.hsr += r.hsr; o.acc += r.acc; o.sp = Math.max(o.sp, r.sp); o.days++; }));
   const last = ds[ds.length-1].date.slice(8,10)+'/'+ds[ds.length-1].date.slice(5,7);
-  return {week:w, final:false, live:true, days:ds.length, rows:Object.values(by),
+  // só quem esteve em todos os treinos da semana (um jogador que faltou a um treino teria totais mais baixos sem razão)
+  return {week:w, final:false, live:true, days:ds.length, rows:Object.values(by).filter(o => o.me || o.days===ds.length),
     note:'Semana '+w+' em curso: soma dos '+ds.length+' treino'+(ds.length>1?'s':'')+' de equipa até '+last+' (relatórios diários dos Backs). Atualiza a cada relatório; o relatório semanal substitui-a.', game:null};
 }
 // posWeek(w): só o relatório semanal (medalhas e página Semana). posWeek() sem semana: a mais recente, incluindo a semana em curso (Hoje).
