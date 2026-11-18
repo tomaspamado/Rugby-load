@@ -77,3 +77,12 @@
 .corpo-tabs button{flex:1}
 #pg-corpo [hidden]{display:none!important}
 #bodycard > .todo{margin-top:0}
+/* salto (CMJ) */
+#s-salto{margin-top:14px}
+.sj-big{display:flex;align-items:baseline;gap:6px;margin:4px 0 8px}
+.sj-big b{font-family:"Barlow Condensed",sans-serif;font-size:44px;line-height:1}
+.sj-big em{font-style:normal;font-size:18px;opacity:.8}
+.sj-big span{font-size:14px;font-weight:600;margin-left:6px}
+.sj-big span.up,#s-salto small.up{color:#5CC48A}
+.sj-big span.dn{color:#F2B84B}
+.sj-sp{display:block;width:100%;height:50px;margin-top:10px}
