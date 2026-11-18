@@ -84,11 +84,12 @@
     const html = '<h2>'+m.n+'</h2><div class="sub2"></div>'
       +'<div class="gr" aria-live="polite"><small class="r1"></small><div class="gv"></div><div class="gd r3"></div><small class="r4"></small></div>'
       +'<div class="gflt"><div class="seg" role="group" aria-label="'+T('Ver por','View by')+'"><button type="button" data-v="d" aria-pressed="false">'+T('Por treino','By session')+'</button><button type="button" data-v="w" aria-pressed="false">'+T('Por semana','By week')+'</button></div>'
-      +'<div class="seg" role="group" aria-label="'+T('Período','Period')+'"><button type="button" data-r="12" aria-pressed="true">'+T('Últimas 12','Last 12')+'</button><button type="button" data-r="0" aria-pressed="false">'+T('Todas','All')+'</button></div>'
+      +'<div class="seg sd" role="group" aria-label="'+T('Período','Period')+'">'+[[7,'7 d','7 d'],[14,'14 d','14 d'],[30,'30 d','30 d'],[182,'6 meses','6 mo'],[365,'1 ano','1 yr'],[0,'Máx.','Max']].map(([n,a,b]) => '<button type="button" data-dr="'+n+'" aria-pressed="'+(n===30)+'">'+T(a,b)+'</button>').join('')+'</div>'
+      +'<div class="seg sw" role="group" aria-label="'+T('Período','Period')+'"><button type="button" data-r="12" aria-pressed="true">'+T('Últimas 12','Last 12')+'</button><button type="button" data-r="0" aria-pressed="false">'+T('Todas','All')+'</button></div>'
       +'<div class="seg" role="group" aria-label="'+T('Tipo de sessão','Session type')+'"><button type="button" data-t="all" aria-pressed="true">'+T('Tudo','All')+'</button><button type="button" data-t="tr" aria-pressed="false">'+T('Treinos','Training')+'</button><button type="button" data-t="ma" aria-pressed="false">'+T('Jogos','Matches')+'</button></div></div>'
       +'<div class="cbox"><canvas tabindex="0" role="img" aria-label="'+m.n+'"></canvas></div><div class="glw"></div><p class="gh"></p>';
     openSheet(card, m.n, html, root => {
-      let range = 12, tf = 'all', sel = 0, src = [], ch = null, first = true;
+      let range = 12, drange = 30, tf = 'all', sel = 0, src = [], ch = null, first = true;
       const q = x => root.querySelector(x), r1 = q('.r1'), gv = q('.gv'), r3 = q('.r3'), r4 = q('.r4'), canvas = q('canvas');
       const pool = () => SESSIONS.filter(s => tf==='all' || (tf==='ma' ? s.type==='Match' : s.type!=='Match'));
       const km = m.k==='rd';                                   // na vista semanal a distância vai em km
@@ -123,12 +124,15 @@
         r4.textContent = p.xs.length+' '+(p.xs.length===1?T('sessão','session'):T('sessões','sessions'))+(p.match?T(' · com jogo',' · with a match'):'')+(p.est?T(' · inclui estimativas sem GPS',' · includes no-GPS estimates'):'')+tgw;
       };
       const read = () => { const s = src[sel];
-        if(!s){ r1.textContent = T('Sem sessões com este filtro.','No sessions with this filter.'); gv.textContent = ''; r3.innerHTML = ''; r4.textContent = ''; return; }
+        if(!s){ r1.textContent = T('Sem sessões neste período ou com este filtro.','No sessions in this period or with this filter.'); gv.textContent = ''; r3.innerHTML = ''; r4.textContent = ''; return; }
         view==='w' ? readWeek(s, src[sel-1]) : readDay(s); };
       const setSel = i => { if(i===sel || !src[i]) return; sel = i; read(); if(ch) ch.update('none'); };
       const draw = () => {
         const all = view==='w' ? weekly() : pool();
-        src = range===0 ? all : all.slice(-range);
+        // por treino: os últimos N dias até hoje (0 = tudo); por semana: as últimas 12 semanas ou todas
+        const since = n => { const d = new Date(TODAY+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()-n+1); return d.toISOString().slice(0,10); };
+        src = view==='w' ? (range===0 ? all : all.slice(-range)) : (drange===0 ? all : all.filter(s => s.date>=since(drange)));
+        q('.sd').hidden = view==='w'; q('.sw').hidden = view!=='w';
         sel = Math.max(0, src.length-1);
         if(first && view==='w' && w0!=null){ const i = src.findIndex(p => p.week===w0); if(i>=0) sel = i; }
         first = false;
@@ -155,6 +159,7 @@
       };
       root.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { if(view===b.dataset.v) return; view = b.dataset.v; draw(); }));
       root.querySelectorAll('[data-r]').forEach(b => b.addEventListener('click', () => { range = +b.dataset.r; root.querySelectorAll('[data-r]').forEach(x=>x.setAttribute('aria-pressed', x===b)); draw(); }));
+      root.querySelectorAll('[data-dr]').forEach(b => b.addEventListener('click', () => { drange = +b.dataset.dr; root.querySelectorAll('[data-dr]').forEach(x=>x.setAttribute('aria-pressed', x===b)); draw(); }));
       root.querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => { tf = b.dataset.t; root.querySelectorAll('[data-t]').forEach(x=>x.setAttribute('aria-pressed', x===b)); draw(); }));
       canvas.addEventListener('keydown', e => { if(e.key==='ArrowLeft'){ e.preventDefault(); setSel(sel-1); } else if(e.key==='ArrowRight'){ e.preventDefault(); setSel(sel+1); } });
       draw();
@@ -168,7 +173,7 @@
   document.addEventListener('keydown', e => { const el = e.target.closest && e.target.closest('[data-q="wkkm"],[data-q="wksp"]'); if(!el || (e.key!=='Enter' && e.key!==' ')) return;
     e.stopImmediatePropagation(); e.preventDefault(); openEvol(el, MET[el.dataset.q==='wkkm'?0:3], 'w', CUR_WEEK); }, true);
   // botão escolhido em branco (uma regra geral com !important pintava-o da cor do fundo)
-  const st = document.createElement('style'); st.textContent = '.gsheet .seg button[aria-pressed=true]{background:#fff!important;color:#0E1A2E!important;border-color:#fff!important}'; document.head.appendChild(st);
+  const st = document.createElement('style'); st.textContent = '.gsheet .seg button[aria-pressed=true]{background:#fff!important;color:#0E1A2E!important;border-color:#fff!important}.gsheet .seg[hidden]{display:none!important}.gsheet .sd{flex-wrap:nowrap!important}.gsheet .sd button{padding:6px 9px;font-size:13px;white-space:nowrap}'; document.head.appendChild(st);
 
   // ---------- ligar aos quadrados ----------
   function arm(scope, fn){
