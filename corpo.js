@@ -37,7 +37,7 @@
     window.CORPO_TAB = show;
   }
   // ---------- Salto vertical (CMJ nas plataformas de força), no separador Força ----------
-  // Guarda 'jump_log' [{id,date,cm}] e 'jump_goal' (cm, por defeito 55). Primeiro registo: 51,7 cm a 18/11/2026.
+  // Guarda 'jump_log' [{id,date,cm}] e 'jump_goal' (cm, por defeito 55). Histórico inicial: 17 saltos até 18/11/2026 (51,7 cm).
   function salto(){
     const {en: EN} = I18N;
     if(document.getElementById('s-salto')) return;
@@ -45,7 +45,12 @@
     const ld = (k,d) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v==null ? d : v; }catch(e){ return d; } };
     const sv = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } };
     if(window.REG && REG.KEYS) [KEY, GK].forEach(k => { if(!REG.KEYS.includes(k)) REG.KEYS.push(k); });
-    try{ if(!localStorage.getItem('jump_seed1')){ const L = ld(KEY, []) || []; if(!L.some(x => x.date==='2026-11-18' && +x.cm===51.7)) L.push({id:1763467200001, date:'2026-11-18', cm:51.7}); sv(KEY, L); localStorage.setItem('jump_seed1','1'); } }catch(e){}
+    // Histórico das plataformas de força (altura pelo impulso-momento) que deste a 18/11: 17 saltos, ~3 dias entre cada um, o último hoje.
+    // As datas antes de 18/11 são aproximadas (de 3 em 3 dias para trás).
+    const HIST = [['2026-10-01',44.5],['2026-10-04',43.3],['2026-10-07',44.0],['2026-10-10',39.3],['2026-10-13',39.0],['2026-10-16',38.0],['2026-10-19',41.6],['2026-10-22',39.3],['2026-10-25',41.3],['2026-10-28',39.6],['2026-10-31',42.2],['2026-11-03',43.3],['2026-11-06',46.4],['2026-11-09',45.5],['2026-11-12',43.3],['2026-11-15',49.0],['2026-11-18',51.7]];
+    try{ if(!localStorage.getItem('jump_seed2')){ const L = ld(KEY, []) || [];
+      HIST.forEach(([d, cm], i) => { if(!L.some(x => x.date===d && +x.cm===cm)) L.push({id:1763467300000+i, date:d, cm}); });
+      sv(KEY, L); localStorage.setItem('jump_seed1','1'); localStorage.setItem('jump_seed2','1'); } }catch(e){}
     const nfx = (v,d) => v==null || isNaN(v) ? '–' : (EN ? v.toFixed(d) : v.toFixed(d).replace('.',','));
     const num = v => { const n = parseFloat(String(v).replace(/\s/g,'').replace(',','.')); return isFinite(n) ? n : NaN; };
     const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
