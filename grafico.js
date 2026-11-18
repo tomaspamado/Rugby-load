@@ -1,5 +1,5 @@
 // ---------- Gráfico em ponto grande: toca num quadrado e vê a série toda, a passar o dedo ----------
-// Evolução: a série sessão a sessão. Semana: o mesmo indicador semana a semana (mesmo dia da semana, comparação justa).
+// Evolução e Semana: o mesmo gráfico, com o botão Por treino / Por semana (Evolução abre por treino, Semana abre por semana).
 (function(){
   const {en: EN, t: T} = I18N;
   const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -75,44 +75,85 @@
   }
   const legend = items => '<div class="gl">'+items.map(([c,t])=>'<span><i style="background:'+c+'"></i>'+t+'</span>').join('')+'</div>';
 
-  // ---------- Evolução: sessão a sessão ----------
-  function openEvol(card, m){
-    const html = '<h2>'+m.n+'</h2><div class="sub2">'+T('Sessão a sessão','Session by session')+'</div>'
+  // ---------- Evolução: por treino ou por semana (o mesmo gráfico, com um botão para trocar) ----------
+  // v = 'd' (treino a treino) ou 'w' (semana a semana: soma da semana; velocidade = a máxima). w0 = semana a selecionar ao abrir.
+  const wkName = w => (window.REG && REG.wkLabel) ? REG.wkLabel(w) : w;
+  function openEvol(card, m, v, w0){
+    let view = v==='w' ? 'w' : 'd';
+    const sub = () => view==='w' ? T('Semana a semana (total de cada semana)','Week by week (each week\'s total)') : T('Treino a treino','Session by session');
+    const html = '<h2>'+m.n+'</h2><div class="sub2"></div>'
       +'<div class="gr" aria-live="polite"><small class="r1"></small><div class="gv"></div><div class="gd r3"></div><small class="r4"></small></div>'
-      +'<div class="gflt"><div class="seg" role="group" aria-label="'+T('Período','Period')+'"><button type="button" data-r="12" aria-pressed="true">'+T('Últimas 12','Last 12')+'</button><button type="button" data-r="0" aria-pressed="false">'+T('Todas','All')+'</button></div>'
+      +'<div class="gflt"><div class="seg" role="group" aria-label="'+T('Ver por','View by')+'"><button type="button" data-v="d" aria-pressed="false">'+T('Por treino','By session')+'</button><button type="button" data-v="w" aria-pressed="false">'+T('Por semana','By week')+'</button></div>'
+      +'<div class="seg" role="group" aria-label="'+T('Período','Period')+'"><button type="button" data-r="12" aria-pressed="true">'+T('Últimas 12','Last 12')+'</button><button type="button" data-r="0" aria-pressed="false">'+T('Todas','All')+'</button></div>'
       +'<div class="seg" role="group" aria-label="'+T('Tipo de sessão','Session type')+'"><button type="button" data-t="all" aria-pressed="true">'+T('Tudo','All')+'</button><button type="button" data-t="tr" aria-pressed="false">'+T('Treinos','Training')+'</button><button type="button" data-t="ma" aria-pressed="false">'+T('Jogos','Matches')+'</button></div></div>'
-      +'<div class="cbox"><canvas tabindex="0" role="img" aria-label="'+m.n+'"></canvas></div>'
-      +legend([['rgba(255,255,255,.55)',T('Treino','Training')],['#FF6B6B',T('Jogo','Match')],['#D9981A',T('Selecionado','Selected')]].concat(m.line?[]:[['#fff',T('Média do grupo','Group average')]]))
-      +'<p class="gh">'+T('Toca e arrasta o dedo no gráfico para ver cada sessão.','Touch and drag along the chart to see each session.')+'</p>';
+      +'<div class="cbox"><canvas tabindex="0" role="img" aria-label="'+m.n+'"></canvas></div><div class="glw"></div><p class="gh"></p>';
     openSheet(card, m.n, html, root => {
-      let range = 12, tf = 'all', sel = 0, src = [], ch = null;
-      const r1 = root.querySelector('.r1'), gv = root.querySelector('.gv'), r3 = root.querySelector('.r3'), r4 = root.querySelector('.r4'), canvas = root.querySelector('canvas');
+      let range = 12, tf = 'all', sel = 0, src = [], ch = null, first = true;
+      const q = x => root.querySelector(x), r1 = q('.r1'), gv = q('.gv'), r3 = q('.r3'), r4 = q('.r4'), canvas = q('canvas');
       const pool = () => SESSIONS.filter(s => tf==='all' || (tf==='ma' ? s.type==='Match' : s.type!=='Match'));
-      const read = () => {
-        const s = src[sel]; if(!s){ r1.textContent = T('Sem sessões com este filtro.','No sessions with this filter.'); gv.textContent = ''; r3.innerHTML = ''; r4.textContent = ''; return; }
-        const v = s[m.k], ga = grpAvg(s,m);
-        r1.textContent = dlong(s.date)+' · '+(s.type==='Match' ? T('Jogo vs ','Match vs ')+(s.opponent||'') : T('Treino','Training'))+' · '+T('Semana ','Week ')+s.week;
-        gv.innerHTML = m.f(v)+(m.u?'<em>'+m.u+'</em>':'');
-        const x = ga!=null ? pct(v,ga) : null;
+      const km = m.k==='rd';                                   // na vista semanal a distância vai em km
+      const yv = x => x==null ? null : (view==='w' && km ? x/1000 : x);
+      const disp = x => view==='w' && km ? f1(x/1000) : m.f(x), unit = () => view==='w' && km ? 'km' : m.u;
+      // soma de uma lista de sessões (velocidade: a máxima, sem contar estimativas)
+      const sum = xs => { if(!xs.length) return null; const real = xs.filter(s => !s.est), sp = real.length ? Math.max(...real.map(s=>s.maxSpeed)) : null;
+        return m.k==='maxSpeed' ? sp : xs.reduce((a,s)=>a+(s[m.k]||0),0); };
+      const weekly = () => { const ps = pool(), ws = [...new Set(ps.map(s=>s.week))].sort((a,b)=>a-b);
+        return ws.map(w => { const xs = ps.filter(s=>s.week===w), ga = m.line ? null : xs.reduce((a,s)=>a+(grpAvg(s,m)||0),0);
+          return {week:w, xs, d0:xs[0].date, d1:xs[xs.length-1].date, v:sum(xs), ga, match:xs.some(s=>s.type==='Match'), est:xs.some(s=>s.est), partial:w===CUR_WEEK}; }).filter(p => p.v!=null); };
+      const readDay = s => {
+        const val = s[m.k], ga = grpAvg(s,m);
+        r1.textContent = dlong(s.date)+' · '+(s.type==='Match' ? T('Jogo vs ','Match vs ')+(s.opponent||'') : T('Treino','Training'))+' · '+T('Semana ','Week ')+wkName(s.week);
+        gv.innerHTML = m.f(val)+(m.u?'<em>'+m.u+'</em>':'');
+        const x = ga!=null ? pct(val,ga) : null;
         r3.innerHTML = ga!=null ? dlt(x, m.line?3:10)+' '+T('vs. média do grupo','vs. group average') : '';
-        r4.textContent = m.k==='maxSpeed' ? Math.round(v/MAXREF*100)+T('% do teu máximo (','% of your max (')+f1(MAXREF)+' km/h)' : (ga!=null ? T('Média do grupo nessa sessão: ','Group average in that session: ')+m.f(ga)+(m.u?' '+m.u:'') : '');
+        r4.textContent = m.k==='maxSpeed' ? Math.round(val/MAXREF*100)+T('% do teu máximo (','% of your max (')+f1(MAXREF)+' km/h)' : (ga!=null ? T('Média do grupo nessa sessão: ','Group average in that session: ')+m.f(ga)+(m.u?' '+m.u:'') : '');
       };
+      const readWeek = (p, prev) => {
+        r1.textContent = T('Semana ','Week ')+wkName(p.week)+' · '+dshort(p.d0)+(p.d1!==p.d0 ? ' – '+dshort(p.d1) : '')+(p.partial ? T(' (em curso)',' (in progress)') : '');
+        gv.innerHTML = disp(p.v)+(unit()?'<em>'+unit()+'</em>':'');
+        let x = null, lab = T('vs. semana anterior','vs. previous week');
+        if(prev){
+          if(p.partial){ const cut = dow(TODAY), pv = sum(prev.xs.filter(s => dow(s.date)<=cut));   // semana em curso: compara até ao mesmo dia
+            if(pv) { x = pct(p.v, pv); lab = T('vs. semana anterior até ','vs. previous week up to ')+DOWN[cut%7].replace('-feira',''); } }
+          else x = pct(p.v, prev.v);
+        }
+        r3.innerHTML = x!=null ? dlt(x, m.line?3:10)+' '+lab : '';
+        const ts = window.TG ? TG.status(p.week, m.k==='maxSpeed'?'sp':m.k) : null;
+        const tgw = ts ? ' · '+(p.partial ? T('Alvo até hoje ','Target to date ') : T('Alvo ','Target '))+(km?f1(ts.goal/1000)+' km':m.k==='maxSpeed'?f1(ts.goal)+' km/h':f0(ts.goal)+(m.u?' '+m.u:''))+': '+TG.ICON[ts.st]+' '+TG.WORD[ts.st] : '';
+        r4.textContent = p.xs.length+' '+(p.xs.length===1?T('sessão','session'):T('sessões','sessions'))+(p.match?T(' · com jogo',' · with a match'):'')+(p.est?T(' · inclui estimativas sem GPS',' · includes no-GPS estimates'):'')+tgw;
+      };
+      const read = () => { const s = src[sel];
+        if(!s){ r1.textContent = T('Sem sessões com este filtro.','No sessions with this filter.'); gv.textContent = ''; r3.innerHTML = ''; r4.textContent = ''; return; }
+        view==='w' ? readWeek(s, src[sel-1]) : readDay(s); };
       const setSel = i => { if(i===sel || !src[i]) return; sel = i; read(); if(ch) ch.update('none'); };
       const draw = () => {
-        src = (range===0 ? pool() : pool().slice(-range));
+        const all = view==='w' ? weekly() : pool();
+        src = range===0 ? all : all.slice(-range);
         sel = Math.max(0, src.length-1);
+        if(first && view==='w' && w0!=null){ const i = src.findIndex(p => p.week===w0); if(i>=0) sel = i; }
+        first = false;
         if(ch) ch.destroy();
-        const typeCol = s => s.type==='Match' ? '#FF6B6B' : 'rgba(255,255,255,.5)';
-        const pick = (cols) => ctx => ctx.dataIndex===sel ? '#D9981A' : cols[ctx.dataIndex];
+        q('.sub2').textContent = sub();
+        root.querySelectorAll('[data-v]').forEach(b => b.setAttribute('aria-pressed', b.dataset.v===view));
+        const W = view==='w', red = d => W ? d.match : d.type==='Match';
+        const cols = src.map(d => red(d) ? '#FF6B6B' : (W && d.partial ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.5)'));
+        const pick = cs => ctx => ctx.dataIndex===sel ? '#D9981A' : cs[ctx.dataIndex];
+        const vals = src.map(d => yv(W ? d.v : d[m.k]));
         const ds = [m.line
-          ? {type:'line', label:m.n, data:src.map(s=>s[m.k]), borderColor:'#fff', backgroundColor:'#fff', borderWidth:2.5, pointRadius:src.map(s=>s.type==='Match'?5:3.5), pointBackgroundColor:pick(src.map(s=>s.type==='Match'?'#FF6B6B':'#fff')), pointBorderColor:'#0E1A2E', pointBorderWidth:1.5, tension:.25, order:2}
-          : {type:'bar', label:m.n, data:src.map(s=>s[m.k]), backgroundColor:pick(src.map(typeCol)), borderRadius:{topLeft:6,topRight:6}, borderSkipped:'bottom', maxBarThickness:28, order:2}];
-        if(!m.line) ds.push({type:'line', label:T('Média do grupo','Group average'), data:src.map(s=>grpAvg(s,m)), borderColor:'#fff', borderWidth:2, borderDash:[5,4], pointRadius:0, pointHoverRadius:0, spanGaps:true, order:1});
+          ? {type:'line', label:m.n, data:vals, borderColor:'#fff', backgroundColor:'#fff', borderWidth:2.5, pointRadius:src.map(d=>red(d)?5:3.5), pointBackgroundColor:pick(src.map(d=>red(d)?'#FF6B6B':'#fff')), pointBorderColor:'#0E1A2E', pointBorderWidth:1.5, tension:.25, order:2}
+          : {type:'bar', label:m.n, data:vals, backgroundColor:pick(cols), borderRadius:{topLeft:6,topRight:6}, borderSkipped:'bottom', maxBarThickness:W?34:28, order:2}];
+        if(!m.line) ds.push({type:'line', label:T('Média do grupo','Group average'), data:src.map(d => yv(W ? d.ga : grpAvg(d,m))), borderColor:'#fff', borderWidth:2, borderDash:[5,4], pointRadius:0, pointHoverRadius:0, spanGaps:true, order:1});
         else{ ds.push({type:'line', label:T('Máximo pessoal','Personal max'), data:src.map(()=>MAXREF), borderColor:'rgba(255,255,255,.6)', borderWidth:1.5, borderDash:[3,5], pointRadius:0, order:1});
               ds.push({type:'line', label:T('Alvo ','Target ')+Math.round(spdPct()*100)+'%', data:src.map(()=>MAXREF*spdPct()), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1}); }
-        ch = makeChart(canvas, {data:{labels:src.map(s=>dshort(s.date)), datasets:ds}, min:m.line?18:undefined}, ()=>sel, setSel);
+        if(W && !m.line && window.TG){ const g = TG.load()[m.k==='accel'?'accel':m.k]; if(g) ds.push({type:'line', label:T('Alvo','Target'), data:src.map(()=>yv(g)), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1}); }
+        ch = makeChart(canvas, {data:{labels:src.map(d => W ? T('S','W')+wkName(d.week) : dshort(d.date)), datasets:ds}, min:m.line?18:undefined}, ()=>sel, setSel);
+        q('.glw').innerHTML = legend([['rgba(255,255,255,.55)', W?T('Semana','Week'):T('Treino','Training')], ['#FF6B6B', W?T('Semana com jogo','Week with a match'):T('Jogo','Match')], ['#D9981A',T('Selecionado','Selected')]]
+          .concat(m.line ? [] : [['#fff', W?T('Média do grupo (soma)','Group average (total)'):T('Média do grupo','Group average')]]).concat(W && !m.line && window.TG ? [['#5CC48A',T('Alvo semanal','Weekly target')]] : []));
+        q('.gh').textContent = W ? T('Toca e arrasta o dedo no gráfico para ver cada semana. A semana em curso compara-se com a anterior até ao mesmo dia.','Touch and drag along the chart to see each week. The current week is compared with the previous one up to the same day.')
+                                 : T('Toca e arrasta o dedo no gráfico para ver cada sessão.','Touch and drag along the chart to see each session.');
         read();
       };
+      root.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { if(view===b.dataset.v) return; view = b.dataset.v; draw(); }));
       root.querySelectorAll('[data-r]').forEach(b => b.addEventListener('click', () => { range = +b.dataset.r; root.querySelectorAll('[data-r]').forEach(x=>x.setAttribute('aria-pressed', x===b)); draw(); }));
       root.querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => { tf = b.dataset.t; root.querySelectorAll('[data-t]').forEach(x=>x.setAttribute('aria-pressed', x===b)); draw(); }));
       canvas.addEventListener('keydown', e => { if(e.key==='ArrowLeft'){ e.preventDefault(); setSel(sel-1); } else if(e.key==='ArrowRight'){ e.preventDefault(); setSel(sel+1); } });
@@ -120,52 +161,14 @@
       return () => { if(ch) ch.destroy(); };
     });
   }
-
-  // ---------- Semana: semana a semana, até ao mesmo dia ----------
-  function openWeeks(card, m){
-    const cut = weekCut(selWeek), cutName = DOWN[cut%7].replace('-feira','');
-    const weeks = [...new Set(SESSIONS.map(x=>x.week))].sort((a,b)=>a-b);
-    const tot = w => { const t = wkTot(w,cut); if(!t) return null;
-      const acc = SESSIONS.filter(x=>x.week===w && dow(x.date)<=cut).reduce((a,x)=>a+x.accel,0);
-      const v = m.k==='rd' ? t.rd : m.k==='hsr' ? t.hsr : m.k==='accel' ? acc : t.sp;
-      const xs = SESSIONS.filter(x=>x.week===w && dow(x.date)<=cut);
-      return {w, v, n:t.n, d0:xs[0].date, d1:xs[xs.length-1].date, gap:SESSIONS.some(x=>x.week===w && x.gpsGap)}; };
-    const pts = weeks.map(tot).filter(Boolean);
-    const disp = v => m.k==='rd' ? f1(v/1000) : m.f(v), unit = m.k==='rd' ? 'km' : m.u;
-    const yv = v => m.k==='rd' ? v/1000 : v;
-    const html = '<h2>'+m.n+'</h2><div class="sub2">'+T('Semana a semana, só até '+cutName+' para a comparação ser justa','Week by week, only up to '+cutName+' so the comparison is fair')+'</div>'
-      +'<div class="gr" aria-live="polite"><small class="r1"></small><div class="gv"></div><div class="gd r3"></div><small class="r4"></small></div>'
-      +'<div class="cbox"><canvas tabindex="0" role="img" aria-label="'+m.n+'"></canvas></div>'
-      +legend([['rgba(255,255,255,.55)',T('Semana','Week')],['#D9981A',T('Selecionada','Selected')],['#5CC48A',T('Alvo','Target')]])
-      +'<p class="gh">'+T('Toca e arrasta o dedo no gráfico para ver cada semana.','Touch and drag along the chart to see each week.')+'</p>';
-    openSheet(card, m.n, html, root => {
-      let sel = Math.max(0, pts.findIndex(p=>p.w===selWeek));
-      const r1 = root.querySelector('.r1'), gv = root.querySelector('.gv'), r3 = root.querySelector('.r3'), r4 = root.querySelector('.r4'), canvas = root.querySelector('canvas');
-      const read = () => {
-        const p = pts[sel], q = pts[sel-1]; if(!p) return;
-        r1.textContent = T('Semana ','Week ')+p.w+' · '+dshort(p.d0)+' – '+dshort(p.d1);
-        gv.innerHTML = disp(p.v)+(unit?'<em>'+unit+'</em>':'');
-        const x = q && !p.gap && !q.gap ? pct(p.v,q.v) : null;
-        r3.innerHTML = x!=null ? dlt(x, m.k==='maxSpeed'?3:10)+' '+T('vs. semana anterior','vs. previous week') : '';
-        const ts = window.TG ? TG.status(p.w, m.k==='maxSpeed'?'sp':m.k) : null;
-        const tgw = ts ? ' · '+T('Alvo ','Target ')+(m.k==='rd'?f1(ts.goal/1000)+' km':m.k==='maxSpeed'?f1(ts.goal)+' km/h':f0(ts.goal)+(m.u?' '+m.u:''))+': '+TG.ICON[ts.st]+' '+TG.WORD[ts.st] : '';
-        r4.textContent = (p.gap||(q&&q.gap)) ? T('Houve treinos sem GPS (Agronomia): total incompleto, não comparo.','Some training had no GPS (Agronomia): incomplete total, no comparison.')+tgw
-          : p.n+' '+(p.n===1?T('sessão','session'):T('sessões','sessions'))+tgw;
-      };
-      const setSel = i => { if(i===sel || !pts[i]) return; sel = i; read(); ch.update('none'); };
-      const cols = pts.map(p => p.gap ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.5)');
-      const pick = ctx => ctx.dataIndex===sel ? '#D9981A' : cols[ctx.dataIndex];
-      const ds = [m.k==='maxSpeed'
-        ? {type:'line', label:m.n, data:pts.map(p=>yv(p.v)), borderColor:'#fff', backgroundColor:'#fff', borderWidth:2.5, pointRadius:4, pointBackgroundColor:pick, pointBorderColor:'#0E1A2E', pointBorderWidth:1.5, tension:.25, order:2}
-        : {type:'bar', label:m.n, data:pts.map(p=>yv(p.v)), backgroundColor:pick, borderRadius:{topLeft:6,topRight:6}, borderSkipped:'bottom', maxBarThickness:34, order:2}];
-      if(m.k==='maxSpeed') ds.push({type:'line', label:T('Alvo ','Target ')+Math.round(spdPct()*100)+'%', data:pts.map(()=>MAXREF*spdPct()), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1});
-      else if(window.TG) ds.push({type:'line', label:T('Alvo','Target'), data:pts.map(()=>yv(TG.load()[m.k==='accel'?'accel':m.k])), borderColor:'#5CC48A', borderWidth:2, pointRadius:0, order:1});
-      const ch = makeChart(canvas, {data:{labels:pts.map(p=>T('S','W')+p.w), datasets:ds}, min:m.k==='maxSpeed'?18:undefined}, ()=>sel, setSel);
-      read();
-      canvas.addEventListener('keydown', e => { if(e.key==='ArrowLeft'){ e.preventDefault(); setSel(sel-1); } else if(e.key==='ArrowRight'){ e.preventDefault(); setSel(sel+1); } });
-      return () => ch.destroy();
-    });
-  }
+  window.OPENEVOL = openEvol; window.GMET = MET;
+  // Hoje: os quadrados da distância e da velocidade da semana abrem este gráfico (por semana), com o botão para ver por treino
+  document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-q="wkkm"],[data-q="wksp"]'); if(!el) return;
+    e.stopImmediatePropagation(); e.preventDefault(); openEvol(el, MET[el.dataset.q==='wkkm'?0:3], 'w', CUR_WEEK); }, true);
+  document.addEventListener('keydown', e => { const el = e.target.closest && e.target.closest('[data-q="wkkm"],[data-q="wksp"]'); if(!el || (e.key!=='Enter' && e.key!==' ')) return;
+    e.stopImmediatePropagation(); e.preventDefault(); openEvol(el, MET[el.dataset.q==='wkkm'?0:3], 'w', CUR_WEEK); }, true);
+  // botão escolhido em branco (uma regra geral com !important pintava-o da cor do fundo)
+  const st = document.createElement('style'); st.textContent = '.gsheet .seg button[aria-pressed=true]{background:#fff!important;color:#0E1A2E!important;border-color:#fff!important}'; document.head.appendChild(st);
 
   // ---------- ligar aos quadrados ----------
   function arm(scope, fn){
@@ -180,9 +183,10 @@
     });
   }
   const ev = document.getElementById('s-evol'), wk = document.getElementById('s-wk');
-  if(ev) arm(ev, openEvol);
+  if(ev) arm(ev, (el,m) => openEvol(el, m, 'd'));
   if(wk){
-    arm(wk, openWeeks);
-    new MutationObserver(() => arm(wk, openWeeks)).observe(wk, {childList:true, subtree:true});
+    const wkOpen = (el,m) => openEvol(el, m, 'w', selWeek);
+    arm(wk, wkOpen);
+    new MutationObserver(() => arm(wk, wkOpen)).observe(wk, {childList:true, subtree:true});
   }
 })();
