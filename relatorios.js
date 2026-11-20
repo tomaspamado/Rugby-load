@@ -48,8 +48,28 @@ const POSWK46 = {week:46, final:true,
 };
 
 
+// ---------- semana 47 (relatório semanal antes do jogo vs Uruguai) ----------
+const POSWK47 = {week:47, final:true,
+  note:"Semana 47: relatório semanal (16 a 22/11), saiu antes do jogo vs Uruguai. Os teus números são de 17 e 18/11 (2 treinos), tal como os outros Non 23. Os 3/4 da equipa de jogo tiveram mais um treino, por isso a distância deles não é diretamente comparável. Jordan Lee Bacon fica de fora (semana incompleta, 1,7 km).",
+  rows:[
+  {n:"Joris Moura",p:"Defesa",g:"in",rd:7732,hsr:2053,acc:84,sp:28.6,pc:89.3},
+  {n:"Tomás Batista",p:"Ponta",g:"in",rd:7521,hsr:1714,acc:95,sp:29.5,pc:92.2},
+  {n:"Manuel Vareiro",p:"Centro",g:"in",rd:6878,hsr:1893,acc:122,sp:31.5,pc:94.6},
+  {n:"Domingos Cabral",p:"Abertura",g:"in",rd:6200,hsr:1339,acc:136,sp:28.4,pc:87.8},
+  {n:"Samuel Marques",p:"9",sh:1,g:"in",rd:6100,hsr:1571,acc:74,sp:31.1,pc:93.8},
+  {n:"Vincent Pinto",p:"Ponta",g:"in",rd:6100,hsr:1493,acc:68,sp:27.8,pc:82.6},
+  {n:"Hugo Camacho",p:"9",sh:1,g:"in",rd:6000,hsr:1267,acc:62,sp:29.8,pc:94.7},
+  {n:"Hugo Aubry",p:"Abertura",g:"in",rd:6000,hsr:1182,acc:97,sp:29.8,pc:95.0},
+  {n:"Diogo Rodrigues",p:"Centro",g:"n23",rd:5900,hsr:1499,acc:89,sp:30.0,pc:89.1},
+  {n:"Vasco Durao",p:"Centro",g:"n23",rd:5300,hsr:1203,acc:75,sp:29.4,pc:92.1},
+  {n:"Tomás Amado",p:"9",sh:1,me:1,g:"n23",rd:6296,hsr:1787,acc:115,sp:30.9,pc:92.5}],
+  // o jogo ainda não tem relatório: fica assim até chegar (os números do 9 titular entram quando houver)
+  game:{date:"vs Uruguai (ainda sem relatório)", avg:{rd:"–",hsr:"–",acc:"–",pc:"–"}, sh:[]}
+};
+
+
 // ---------- semanas com relatório semanal: uma só lista ----------
-const POSWEEKS = [POSWK, POSWK46];
+const POSWEEKS = [POSWK, POSWK46, POSWK47];
 
 // ---------- semana em curso: relatórios diários dos Backs, somados até sair o relatório semanal ----------
 // Um bloco por treino (página Backs do PDF do dia). rd arredondado a 100 m nos outros (gráfico), exato nos 3 primeiros e em ti.

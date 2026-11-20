@@ -159,7 +159,7 @@
           +'<div class="cr"><span>Corrida rápida, semana</span><b>'+f0(me.hsr+myHsr)+'<i> m</i></b><span>'+f0(st.hsr+gHsr)+' m</span><span>'+mS(-needHsr)+'</span></div>'
           +'<div class="sub" style="margin-top:8px">'+(est
             ? 'Jogo estimado: média do 9 que jogou 60 min ou mais nos últimos '+SG.n+' jogos ('+SG.games.map(g=>g.r.n.split(' ')[1]+' '+f1(g.r.rd/1000)+' km, '+g.date.split(' vs ')[1]).join('; ')+'). '
-              +(needRd>0 ? 'Se faltarem '+left+' treino'+(left>1?'s':'')+' de equipa, são ~'+f1(needRd/left/1000)+' km a mais do que ele em cada um'+(needHsr>0?', e ~'+f0(needHsr/left)+' m de corrida rápida':'')+'. Os teus treinos extra contam se tiverem GPS.' : '')
+              +(needRd>0 && left ? 'Se faltarem '+left+' treino'+(left>1?'s':'')+' de equipa, são ~'+f1(needRd/left/1000)+' km a mais do que ele em cada um'+(needHsr>0?', e ~'+f0(needHsr/left)+' m de corrida rápida':'')+'. Os teus treinos extra contam se tiverem GPS.' : '')
             : 'Jogo real do '+first+' ('+P.game.date+'). Os treinos do relatório semanal são os mesmos para os dois.')+(myRd?' Inclui o teu jogo desta semana.':'')+'</div></div>';
         // a frase que fica sempre à vista: o que fazer a seguir
         raceLine = '<p class="rc-line"><b>'+TT('Corrida ao 9 titular','Race to the starting 9')+' ('+first+'):</b> '+(P.live
