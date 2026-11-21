@@ -50,7 +50,7 @@ const POSWK46 = {week:46, final:true,
 
 // ---------- semana 47 (relatório semanal antes do jogo vs Uruguai) ----------
 const POSWK47 = {week:47, final:true,
-  note:"Semana 47: relatório semanal (16 a 22/11), saiu antes do jogo vs Uruguai. Os teus números são de 17 e 18/11 (2 treinos), tal como os outros Non 23. Os 3/4 da equipa de jogo tiveram mais um treino, por isso a distância deles não é diretamente comparável. Jordan Lee Bacon fica de fora (semana incompleta, 1,7 km).",
+  note:"Semana 47: relatório semanal (16 a 22/11), semana fechada: o jogo vs Uruguai (21/11) foi cancelado, por isso só contam os treinos. Os teus números são de 17 e 18/11 (2 treinos), tal como os outros Non 23. Os 3/4 da equipa de jogo tiveram mais um treino, por isso a distância deles não é diretamente comparável. Jordan Lee Bacon fica de fora (semana incompleta, 1,7 km).",
   rows:[
   {n:"Joris Moura",p:"Defesa",g:"in",rd:7732,hsr:2053,acc:84,sp:28.6,pc:89.3},
   {n:"Tomás Batista",p:"Ponta",g:"in",rd:7521,hsr:1714,acc:95,sp:29.5,pc:92.2},
@@ -63,8 +63,9 @@ const POSWK47 = {week:47, final:true,
   {n:"Diogo Rodrigues",p:"Centro",g:"n23",rd:5900,hsr:1499,acc:89,sp:30.0,pc:89.1},
   {n:"Vasco Durao",p:"Centro",g:"n23",rd:5300,hsr:1203,acc:75,sp:29.4,pc:92.1},
   {n:"Tomás Amado",p:"9",sh:1,me:1,g:"n23",rd:6296,hsr:1787,acc:115,sp:30.9,pc:92.5}],
-  // o jogo ainda não tem relatório: fica assim até chegar (os números do 9 titular entram quando houver)
-  game:{date:"vs Uruguai (ainda sem relatório)", avg:{rd:"–",hsr:"–",acc:"–",pc:"–"}, sh:[]}
+  // o jogo de 21/11 foi cancelado: semana fechada só com os treinos (os 9 ficam com 0 de jogo)
+  game:{date:"21/11 vs Uruguai (cancelado)", cancelled:true, avg:{rd:"–",hsr:"–",acc:"–",pc:"–"},
+    sh:[{n:"Samuel Marques",min:"0:00:00",rd:0,hsr:0,acc:0,sp:0},{n:"Hugo Camacho",min:"0:00:00",rd:0,hsr:0,acc:0,sp:0}]}
 };
 
 
