@@ -30,6 +30,8 @@
   SESSIONS.sort((a,b) => a.date.localeCompare(b.date));
 
   // próximo jogo (para planear a véspera)
+  // jogo de domingo 29/11 pela Agronomia: posto uma só vez (podes mudar ou apagar em Mais)
+  try{ if(!localStorage.getItem('nm_seed48')){ if(!ld('next_match', null)) sv('next_match', {date:'2026-11-29', opp:''}); localStorage.setItem('nm_seed48','1'); } }catch(e){}
   window.NEXT_MATCH = (() => { const m = ld('next_match', null); if(!m || !m.date) return null; const t = new Date(); t.setHours(0,0,0,0); return new Date(m.date+'T00:00:00') >= t ? m : null; })();
 
   // chaves que a cópia de segurança leva
@@ -53,7 +55,7 @@
         +'<p class="sub">'+T('Para dias sem relatório (por exemplo treinos nos Lusitanos sem GPS). Se não souberes a média do grupo, deixa em branco: a sessão conta na carga e nos gráficos, mas não é comparada com o grupo.','For days without a report (for example club sessions without GPS). If you do not know the group average, leave it blank: the session counts for load and charts but is not compared with the group.')+'</p>'
         +'<div class="fr2"><label>'+T('Data','Date')+'<input type="date" id="as-date" value="'+today+'" max="'+today+'"></label>'
         +'<label>'+T('Tipo','Type')+'<select id="as-type"><option value="Training">'+T('Treino','Training')+'</option><option value="Match">'+T('Jogo','Match')+'</option></select></label></div>'
-        +'<div class="fr2"><label>'+T('Equipa','Team')+'<select id="as-team"><option>Seleção</option><option>Lusitanos</option></select></label>'
+        +'<div class="fr2"><label>'+T('Equipa','Team')+'<select id="as-team"><option>Seleção</option><option>Agronomia</option><option>Lusitanos</option></select></label>'
         +'<label class="as-m" hidden>'+T('Adversário','Opponent')+'<input type="text" id="as-opp" maxlength="30"></label></div>'
         +'<div class="fr2"><label>'+T('Distância (m)','Distance (m)')+'<input inputmode="numeric" id="as-rd"></label><label>'+T('Corrida rápida (m)','Fast running (m)')+'<input inputmode="numeric" id="as-hsr"></label></div>'
         +'<div class="fr2"><label>'+T('Acelerações','Accelerations')+'<input inputmode="numeric" id="as-acc"></label><label>'+T('Velocidade máx. (km/h)','Top speed (km/h)')+'<input inputmode="decimal" id="as-sp"></label></div>'
