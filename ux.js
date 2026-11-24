@@ -80,4 +80,56 @@
     let ok = false; try{ ok = sessionStorage.getItem('goTg') === '1'; }catch(e){}
     if(ok){ sv.classList.add('tgbusy'); sv.textContent = T('A guardar…','Saving…'); }
   }, 0));
+  // ---------- 20 detalhes de UX (lista "que fazem uma app parecer cara"): os que fazem sentido numa app de telemóvel sem login ----------
+  // Estilos pequenos: números tabulares, títulos equilibrados, áreas de toque maiores, esqueleto enquanto o gráfico desenha, cantos contínuos onde o navegador deixa.
+  const css = document.createElement('style');
+  css.textContent = [
+    // 16. números tabulares: os algarismos ficam alinhados e não "saltam" quando mudam
+    '.gv,.gr,.big2,.rs-st b,.tt b,.chip,.tiles,.arow,.mp-card,td,.rk,.gsheet .r1,.gsheet .r4{font-variant-numeric:tabular-nums}',
+    // 17. títulos equilibrados: sem uma palavra sozinha na última linha
+    'h3,.rt,.cvd,.tag,.mh b{text-wrap:balance}',
+    // 13. hit slop: a área de toque é maior do que o desenho
+    '.gsheet .bk{position:relative}.gsheet .bk::after{content:"";position:absolute;inset:-6px -10px}',
+    '.gsheet .sd button{min-width:44px}',
+    // 1. esqueleto: enquanto o gráfico ainda não desenhou, a caixa pulsa em vez de ficar vazia
+    '.cbox:has(>canvas:not([style])),.cv:has(>canvas:not([style])){border-radius:12px;animation:ux-sk 1.1s ease-in-out infinite alternate}',
+    '@keyframes ux-sk{from{background-color:rgba(127,127,127,.08)}to{background-color:rgba(127,127,127,.2)}}',
+    '@media (prefers-reduced-motion: reduce){.cbox,.cv{animation:none!important}}',
+    // 18. cantos contínuos (squircle) onde o navegador suporta; no resto fica o canto redondo de sempre
+    '@supports (corner-shape: squircle){.card,.chip,.tt,.mp-card,.gsheet .seg button,.seg button,.ctoast{corner-shape:squircle}}',
+    // 5. toast com Desfazer
+    '.ctoast.ux-undo{display:flex;align-items:center;gap:14px}.ctoast.ux-undo button{min-height:44px;padding:0 14px;border:0;border-radius:999px;background:#fff;color:#0E1A2E;font:700 14px Inter,system-ui,sans-serif}'
+  ].join('');
+  document.head.appendChild(css);
+
+  // 5. Desfazer depois de apagar: guarda uma cópia dos registos no toque em "Apagar"; se algo mudou, mostra um toast com Desfazer (6 s).
+  // Funciona também quando a página recarrega depois de apagar (a cópia fica na sessão durante 15 s).
+  const DEL = '[data-del],[data-delb],[data-fdel],[data-jdel],[data-act="cdel"]';
+  const snap = () => { const o = {}; try{ for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); o[k] = localStorage.getItem(k); } }catch(e){} return o; };
+  const differs = a => { const b = snap(); return Object.keys(a).some(k => a[k]!==b[k]) || Object.keys(b).some(k => !(k in a)); };
+  const undoToast = () => {
+    let u = null; try{ u = JSON.parse(sessionStorage.getItem('ux_undo')||'null'); }catch(e){}
+    if(!u || Date.now()-u.t > 15000 || !differs(u.s)){ return; }
+    document.querySelectorAll('.ux-undo').forEach(x => x.remove());
+    const el = document.createElement('div'); el.className = 'ctoast ux-undo'; el.setAttribute('role','status');
+    el.innerHTML = '<span>'+T('Apagado.','Deleted.')+'</span><button type="button">'+T('Desfazer','Undo')+'</button>';
+    document.body.appendChild(el);
+    const kill = setTimeout(() => { el.remove(); try{ sessionStorage.removeItem('ux_undo'); }catch(e){} }, 6000);
+    el.querySelector('button').addEventListener('click', () => { clearTimeout(kill);
+      try{ const now = snap(); Object.keys(now).forEach(k => { if(!(k in u.s)) localStorage.removeItem(k); }); Object.keys(u.s).forEach(k => localStorage.setItem(k, u.s[k])); sessionStorage.removeItem('ux_undo'); }catch(e){}
+      location.reload(); });
+  };
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest(DEL); if(!b) return;
+    // nos botões que pedem confirmação ("Apagar?"), só o segundo toque apaga
+    if((b.dataset.fdel || b.dataset.jdel) && b.dataset.sure!=='1') return;
+    try{ sessionStorage.setItem('ux_undo', JSON.stringify({t:Date.now(), s:snap()})); }catch(e){}
+    setTimeout(undoToast, 120); }, true);
+  addEventListener('DOMContentLoaded', () => setTimeout(undoToast, 300));
+
+  // 19. idempotência: um segundo toque em Guardar (antes de a página recarregar) não grava duas vezes
+  const lastTap = new WeakMap();
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('button.pri,#tgsave'); if(!b) return;
+    const t = lastTap.get(b) || 0, now = Date.now();
+    if(now - t < 1500){ e.stopImmediatePropagation(); e.preventDefault(); return; }
+    lastTap.set(b, now); }, true);
 })();
