@@ -1,9 +1,9 @@
 // ---------- Ícones Kubai (MIT, https://icons.kubai.design) na barra de separadores ----------
-// Carrega só os 7 ícones da barra a partir do jsDelivr (versão fixa). Sem rede, ficam os ícones antigos.
+// Carrega só os 5 ícones da barra a partir do jsDelivr (versão fixa). Sem rede, ficam os ícones antigos.
 // Os ícones mexem-se: ao abrir o separador, ao tocar (também no que já está aberto) e ao passar o rato no computador.
 (function(){
   const B = 'https://cdn.jsdelivr.net/npm/kubai-icons@0.11.0/dist/';
-  const MAP = {hoje:'home', semana:'calendar-week', evol:'chart-line', corpo:'dumbbell', coach:'heart-pulse', trofeus:'medal', mais:'menu'};
+  const MAP = {mundial:'trophy', diario:'clipboard-check', rivais:'users', hoje:'gauge', corpo:'dumbbell'};
   const go = () => {
     const bar = document.getElementById('tabbar'); if(!bar) return;
     const keys = Object.keys(MAP);
