@@ -215,15 +215,15 @@
     pD.innerHTML =
       '<div class="wc-dnav"><button type="button" id="wcprev" aria-label="'+T('Dia anterior','Previous day')+'">‹</button><b>'+(dSel===today?T('Hoje','Today'):dShort(dSel))+' · '+sc+'%</b><button type="button" id="wcnext" aria-label="'+T('Dia seguinte','Next day')+'"'+(dSel>=today?' disabled':'')+'>›</button></div>'
       +'<section class="wc-card">'
-      +'<div class="wc-item"><h3>'+T('Ver rugby','Watch rugby')+'<span>'+(x.watch||0)+' / '+TG.watch+' min</span></h3>'+stp('watch',T('Minutos','Minutes'),[5,15,30])
+      +'<div class="wc-item"><h3>'+T('Ver rugby','Watch rugby')+'<span data-h="watch">'+(x.watch||0)+' / '+TG.watch+' min</span></h3>'+stp('watch',T('Minutos','Minutes'),[5,15,30])
       +'<div class="wc-txt" style="margin-top:8px"><label>'+T('O que viste (jogo, 9 a estudar, os teus clipes)','What you watched (match, 9 to study, your clips)')+'<input type="text" data-t="what" maxlength="120" value="'+esc(x.what||'')+'"></label></div></div>'
-      +'<div class="wc-item"><h3>'+T('Passes','Passes')+'<span>'+((x.passL||0)+(x.passR||0))+' / '+(TG.passL+TG.passR)+'</span></h3>'+stp('passL',T('Esquerda','Left'),[10,25,50])+stp('passR',T('Direita','Right'),[10,25,50])+'</div>'
-      +'<div class="wc-item"><h3>'+T('Pontapés','Kicks')+'<span>'+((x.box||0)+(x.kick||0))+' / '+(TG.box+TG.kick)+'</span></h3>'+stp('box',T('Box kicks','Box kicks'),[5,10])+stp('kick',T('Saída/outros','Exit/other'),[5,10])+'</div>'
-      +'<div class="wc-item"><h3>'+T('Pensar o jogo','Think the game')+'<span>'+(thinkOk(x)?T('feito','done'):T('3 respostas','3 answers'))+'</span></h3><div class="wc-txt">'
+      +'<div class="wc-item"><h3>'+T('Passes','Passes')+'<span data-h="pass">'+((x.passL||0)+(x.passR||0))+' / '+(TG.passL+TG.passR)+'</span></h3>'+stp('passL',T('Esquerda','Left'),[10,25,50])+stp('passR',T('Direita','Right'),[10,25,50])+'</div>'
+      +'<div class="wc-item"><h3>'+T('Pontapés','Kicks')+'<span data-h="kick">'+((x.box||0)+(x.kick||0))+' / '+(TG.box+TG.kick)+'</span></h3>'+stp('box',T('Box kicks','Box kicks'),[5,10])+stp('kick',T('Saída/outros','Exit/other'),[5,10])+'</div>'
+      +'<div class="wc-item"><h3>'+T('Pensar o jogo','Think the game')+'<span data-h="think">'+(thinkOk(x)?T('feito','done'):T('3 respostas','3 answers'))+'</span></h3><div class="wc-txt">'
       +'<label>'+T('Uma coisa que fiz bem hoje','One thing I did well today')+'<textarea rows="2" data-th="good">'+esc(th.good||'')+'</textarea></label>'
       +'<label>'+T('Uma coisa que o 9 titular faria melhor','One thing the starting 9 would do better')+'<textarea rows="2" data-th="fix">'+esc(th.fix||'')+'</textarea></label>'
       +'<label>'+T('A decisão que vou treinar amanhã','The decision I will train tomorrow')+'<textarea rows="2" data-th="plan">'+esc(th.plan||'')+'</textarea></label></div></div>'
-      +'<div class="wc-item"><h3>'+T('Corpo','Body')+'<span>'+(x.sleep?String(x.sleep).replace('.',EN?'.':','):'–')+' / '+TG.sleep+' h</span></h3>'
+      +'<div class="wc-item"><h3>'+T('Corpo','Body')+'<span data-h="body">'+(x.sleep?String(x.sleep).replace('.',EN?'.':','):'–')+' / '+TG.sleep+' h</span></h3>'
       +'<div class="wc-step" data-k="sleep"><span class="lb">'+T('Sono (h)','Sleep (h)')+'</span><button type="button" class="m" data-d="-0.5" aria-label="'+T('menos meia hora','half an hour less')+'">−</button><b>'+String(x.sleep||0).replace('.',EN?'.':',')+'</b><button type="button" data-d="0.5">+½</button><button type="button" data-d="1">+1</button></div>'
       +'<label class="wc-tog"><input type="checkbox" data-c="gym"'+(x.gym?' checked':'')+'> '+T('Treino, ginásio ou prehab feito (ou descanso planeado)','Training, gym or prehab done (or planned rest)')+'</label></div>'
       +'</section>'
@@ -235,14 +235,26 @@
     pD.querySelector('#wcprev').addEventListener('click', () => { dSel = addD(dSel,-1); renderD(); });
     pD.querySelector('#wcnext').addEventListener('click', () => { if(dSel<today){ dSel = addD(dSel,1); renderD(); } });
     pD.querySelectorAll('.wc-step button').forEach(b => b.addEventListener('click', () => {
-      const k = b.closest('.wc-step').dataset.k, d = +b.dataset.d, cur = get(dSel)[k]||0, max = k==='sleep'?14:k==='watch'?600:2000;
-      put(dSel, {[k]: Math.max(0, Math.min(max, Math.round((cur+d)*2)/2))}); renderD(); renderM(); }));
+      const row = b.closest('.wc-step'), k = row.dataset.k, d = +b.dataset.d, cur = get(dSel)[k]||0, max = k==='sleep'?14:k==='watch'?600:2000;
+      const v = Math.max(0, Math.min(max, Math.round((cur+d)*2)/2)); put(dSel, {[k]: v});
+      row.querySelector('b').textContent = String(v).replace('.',EN?'.':','); refreshD(); }));
     pD.querySelectorAll('[data-th]').forEach(t => t.addEventListener('input', () => { const th2 = Object.assign({}, get(dSel).think||{}, {[t.dataset.th]: t.value}); put(dSel, {think: th2}); }));
-    pD.querySelectorAll('[data-th]').forEach(t => t.addEventListener('change', () => { renderM(); const h = t.closest('.wc-item').querySelector('h3 span'); if(h) h.textContent = thinkOk(get(dSel))?T('feito','done'):T('3 respostas','3 answers'); const hd = pD.querySelector('.wc-dnav b'); if(hd) hd.textContent = (dSel===today?T('Hoje','Today'):dShort(dSel))+' · '+score(get(dSel))+'%'; }));
+    pD.querySelectorAll('[data-th]').forEach(t => t.addEventListener('change', refreshD));
     pD.querySelectorAll('[data-t]').forEach(t => t.addEventListener('change', () => put(dSel, {[t.dataset.t]: t.value})));
-    pD.querySelectorAll('[data-c]').forEach(t => t.addEventListener('change', () => { put(dSel, {[t.dataset.c]: t.checked}); renderD(); renderM(); }));
+    pD.querySelectorAll('[data-c]').forEach(t => t.addEventListener('change', () => { put(dSel, {[t.dataset.c]: t.checked}); refreshD(); }));
     pD.querySelectorAll('[data-day]').forEach(t => { const go = () => { dSel = t.dataset.day; renderD(); }; t.addEventListener('click', go); t.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }); });
     pD.querySelectorAll('[data-tg]').forEach(t => t.addEventListener('change', () => { const v = parseFloat(String(t.value).replace(',','.')); if(v>0){ TG[t.dataset.tg] = v; const o = {}; Object.keys(TG0).forEach(k=>{ if(TG[k]!==TG0[k]) o[k]=TG[k]; }); sv('wc_targets', o); renderD(); renderM(); } }));
+  }
+
+  // atualiza só os números do Diário (sem redesenhar: o toque seguinte cai no mesmo botão, a página não salta)
+  function refreshD(){
+    const x = get(dSel), P = parts(x), by = {}; P.forEach(p => by[p.k] = p);
+    const set = (k, t) => { const e = pD.querySelector('[data-h="'+k+'"]'); if(e) e.textContent = t; };
+    set('watch', by.watch.txt); set('pass', by.pass.txt); set('kick', by.kick.txt); set('think', by.think.txt);
+    set('body', (x.sleep?String(x.sleep).replace('.',EN?'.':','):'–')+' / '+TG.sleep+' h');
+    const sc = score(x), hd = pD.querySelector('.wc-dnav b'); if(hd) hd.textContent = (dSel===today?T('Hoje','Today'):dShort(dSel))+' · '+sc+'%';
+    const cell = pD.querySelector('[data-day="'+dSel+'"]'); if(cell){ cell.querySelector('b').textContent = sc; cell.classList.toggle('p', sc===100); cell.classList.toggle('h', sc>=50 && sc<100); }
+    renderM();
   }
 
   // ---------- RIVAIS ----------
@@ -266,5 +278,44 @@
   }
 
   renderM(); renderD(); renderR();
+
+  // ---------- coesão: cada página abre com o mesmo cabeçalho; as subpáginas da Carga têm "‹ Carga" ----------
+  const PH = {diario:[T('Diário','Daily'),T('O teu trabalho de hoje','Your work today')], rivais:[T('Rivais','Rivals'),''],
+    hoje:[T('Carga','Load'),''], corpo:[T('Corpo','Body'),T('Peso, força e salto','Weight, strength and jump')],
+    semana:[T('Semana','Week'),'',1], evol:[T('Evolução','Progress'),'',1], coach:[T('Rotinas','Routines'),T('Prehab, recuperação e mental','Prehab, recovery and mental'),1], mais:[T('Sessões e definições','Sessions and settings'),'',1], trofeus:[T('Troféus','Trophies'),'',1]};
+  const kick = () => T('Mundial 2027 · faltam ','World Cup 2027 · ')+daysLeft()+T(' dias',' days to go');
+  const head = () => Object.keys(PH).forEach(id => {
+    const pg = document.getElementById('pg-'+id); if(!pg) return;
+    let h = pg.querySelector(':scope > .ph');
+    if(!h){ h = document.createElement('header'); h.className = 'ph'; pg.prepend(h); }
+    const [t, sub, child] = PH[id];
+    const s2 = id==='hoje' ? ((document.getElementById('updated')||{}).textContent||'') : sub;
+    h.innerHTML = (child ? '<button type="button" class="ph-bk" data-go="hoje">‹ '+T('Carga','Load')+'</button>' : '')
+      + '<small class="ph-k">'+kick()+'</small><h1>'+t+'</h1>'+(s2 ? '<div class="ph-s">'+esc(s2)+'</div>' : '');
+    const bk = h.querySelector('.ph-bk'); if(bk) bk.addEventListener('click', () => history.length > 1 ? history.back() : showTab('hoje'));
+  });
+  addEventListener('DOMContentLoaded', () => {
+    head();
+    // as medalhas saíram: tira o quadrado "Medalhas" do resumo da época
+    document.querySelectorAll('#pg-mais .rsp .g > div').forEach(d => { if(/Medalhas|Medals/.test(d.textContent)) d.remove(); });
+    // o Coach e outras páginas redesenham-se por inteiro: o cabeçalho volta a entrar sempre que desaparece
+    Object.keys(PH).forEach(id => { const pg = document.getElementById('pg-'+id); if(pg) new MutationObserver(() => { if(!pg.querySelector(':scope > .ph')) head(); }).observe(pg, {childList:true}); });
+  });
+  const st2 = document.createElement('style');
+  st2.textContent = `
+.ph{padding:14px 2px 6px;display:grid;gap:2px}
+.ph h1{font:700 32px/1.05 var(--font-display);margin:0;color:var(--ink);letter-spacing:.01em}
+.ph-k{font:700 12px/1.2 var(--font-body);letter-spacing:.12em;text-transform:uppercase;color:#D7263D}
+.ph-s{font-size:14px;color:var(--ink-muted);margin-top:2px}
+.ph-bk{justify-self:start;min-height:44px;margin:-6px 0 2px -10px;padding:0 10px;border:0;background:none;color:var(--ink);font:600 15px var(--font-body);cursor:pointer}
+#pg-hoje > .hero,#pg-semana #s-wk > h2,#s-evol .head > div:first-child > h2,#pg-coach .ch > h2,#pg-coach .ch > h2 + .sub,h2.pgt,#pg-corpo > .more-btn{display:none}
+.card,.rsp,.wc-card,.wc-hero,.hero{border-radius:14px}
+#pg-diario .wc-dnav{margin-top:4px}
+input,select,textarea{font-size:16px!important}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overscroll-behavior-y:none}
+button,[role=button],summary,.tabbar *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+`;
+  document.head.appendChild(st2);
   document.addEventListener('visibilitychange', () => { if(!document.hidden){ renderM(); } });
 })();
