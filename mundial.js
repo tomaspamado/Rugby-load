@@ -22,23 +22,41 @@
   const lis = t => new Date(t).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Lisbon'});
   const dShort = s => new Date(s+'T12:00:00').toLocaleDateString(EN?'en-GB':'pt-PT',{weekday:'short',day:'numeric',month:'short'}).replace('.','');
 
-  // ---------- o trabalho de todos os dias ----------
-  const TG0 = {watch:45, passL:100, passR:100, box:30, kick:20, sleep:8};
+  // ---------- o trabalho de todos os dias: pontos ----------
+  // Conta o total do dia, não cada coisa: num dia de descanso ganhas pontos a ver rugby, num dia grande de treino com passes e pontapés.
+  const TG0 = {goal:150, sleep:8};
   const TG = Object.assign({}, TG0, ld('wc_targets', {}));
+  const PT = {watch:1, pass:.5, box:1.5, kick:1, think:10, sleep:20, gym:20};
   const LOG = ld('wc_log', {});
   const get = d => LOG[d] || {};
   const put = (d, o) => { LOG[d] = Object.assign({}, get(d), o); sv('wc_log', LOG); };
-  const thinkOk = x => ['good','fix','plan'].every(k => (x.think && x.think[k] || '').trim().length >= 4);
-  const parts = x => [
-    {k:'watch', n:T('Ver rugby','Watch rugby'), v:Math.min(1,(x.watch||0)/TG.watch), txt:(x.watch||0)+' / '+TG.watch+' min'},
-    {k:'pass', n:T('Passes','Passes'), v:(Math.min(x.passL||0,TG.passL)+Math.min(x.passR||0,TG.passR))/(TG.passL+TG.passR), txt:((x.passL||0)+(x.passR||0))+' / '+(TG.passL+TG.passR)},
-    {k:'kick', n:T('Pontapés','Kicks'), v:Math.min(1,((x.box||0)+(x.kick||0))/(TG.box+TG.kick)), txt:((x.box||0)+(x.kick||0))+' / '+(TG.box+TG.kick)},
-    {k:'think', n:T('Pensar o jogo','Think the game'), v:thinkOk(x)?1:0, txt:thinkOk(x)?T('feito','done'):T('3 respostas','3 answers')},
-    {k:'body', n:T('Corpo','Body'), v:((x.sleep||0)>=TG.sleep?.5:(x.sleep||0)/TG.sleep*.5)+(x.gym?.5:0), txt:(x.sleep?String(x.sleep).replace('.',EN?'.':',')+' h':'– h')+' · '+(x.gym?T('treino/prehab ✓','gym/prehab ✓'):T('treino/prehab','gym/prehab'))}];
-  const score = x => Math.round(parts(x).reduce((a,p)=>a+p.v,0)/5*100);
+  const nThink = x => ['good','fix','plan'].filter(k => (x.think && x.think[k] || '').trim().length >= 4).length;
+  const fx = v => String(v).replace('.',EN?'.':',');
+  const parts = x => { const ps = (x.passL||0)+(x.passR||0), ks = (x.box||0)+(x.kick||0), nt = nThink(x);
+    return [
+    {k:'watch', n:T('Ver rugby','Watch rugby'), pts:(x.watch||0)*PT.watch, txt:(x.watch||0)+' min'},
+    {k:'pass', n:T('Passes','Passes'), pts:ps*PT.pass, txt:String(ps)},
+    {k:'kick', n:T('Pontapés','Kicks'), pts:(x.box||0)*PT.box+(x.kick||0)*PT.kick, txt:String(ks)},
+    {k:'think', n:T('Pensar o jogo','Think the game'), pts:nt*PT.think, txt:nt+' / 3'},
+    {k:'body', n:T('Corpo','Body'), pts:Math.min(1,(x.sleep||0)/TG.sleep)*PT.sleep+(x.gym?PT.gym:0), txt:(x.sleep?fx(x.sleep)+' h':'– h')+(x.gym?T(' · treino',' · training'):'')}]; };
+  const pts = x => Math.round(parts(x).reduce((a,p)=>a+p.pts,0));
+  const done = x => pts(x) >= TG.goal;
   const today = TODAY;
-  const streak = () => { let n = 0, d = today; if(score(get(d))<100) d = addD(d,-1); while(score(get(d))===100){ n++; d = addD(d,-1); } return n; };
+  const streak = () => { let n = 0, d = today; if(!done(get(d))) d = addD(d,-1); while(done(get(d))){ n++; d = addD(d,-1); } return n; };
   const total = k => Object.values(LOG).reduce((a,x)=>a+(k==='pass'?(x.passL||0)+(x.passR||0):k==='kick'?(x.box||0)+(x.kick||0):(x[k]||0)),0);
+  // avisos de variedade: para não fazeres sempre o mesmo (só depois de 3 dias com registos)
+  const warns = () => {
+    const first = Object.keys(LOG).filter(d => pts(LOG[d])>0).sort()[0]; if(!first || first > addD(today,-2)) return [];
+    const since = f => { for(let i=0;i<8;i++){ if(f(get(addD(today,-i)))) return i; } return 8; };
+    const out = [];
+    [[x=>(x.passL||0)+(x.passR||0)>0,3,T('passes','passes'),T('nem que sejam 50','even just 50')],
+     [x=>(x.box||0)+(x.kick||0)>0,3,T('pontapés','kicks'),T('10 box kicks já contam','10 box kicks already count')],
+     [x=>(x.watch||0)>0,4,T('ver rugby','watching rugby'),T('15 minutos de um 9 que admiras','15 minutes of a 9 you admire')],
+     [x=>nThink(x)>0,2,T('pensar o jogo','thinking the game'),T('responde às 3 perguntas','answer the 3 questions')]].forEach(([f,lim,n,tip]) => {
+      const d = since(f); if(d >= lim) out.push((d>=8?T('Nada de ','No ')+n+T(' esta semana',' this week'):T('Há ','')+d+T(' dias sem ',' days without ')+n)+': '+tip+'.'); });
+    let L = 0, R = 0; for(let i=0;i<7;i++){ const x = get(addD(today,-i)); L += x.passL||0; R += x.passR||0; }
+    if(L+R >= 100 && Math.min(L,R) < .6*Math.max(L,R)) out.push(T('Passes desequilibrados nos últimos 7 dias: ','Passes unbalanced over the last 7 days: ')+L+T(' à esquerda, ',' left, ')+R+T(' à direita. Puxa pelo lado ',' right. Work the ')+(L<R?T('esquerdo','left'):T('direito','right'))+T('.',' side.'));
+    return out; };
   const daysLeft = () => Math.max(0, Math.floor((WC.first - Date.now())/864e5));   // igual ao contador
 
   // ---------- os rivais: os dois 9 dos relatórios ----------
@@ -75,11 +93,16 @@
 .wc-day{display:grid;grid-template-columns:92px 1fr;gap:16px;align-items:center;margin-top:10px}
 .wc-ring{width:92px;height:92px;position:relative}
 .wc-ring svg{width:92px;height:92px;transform:rotate(-90deg)}
-.wc-ring b{position:absolute;inset:0;display:grid;place-items:center;font:700 26px var(--font-display);font-variant-numeric:tabular-nums}
+.wc-ring b{position:absolute;inset:0;display:grid;place-content:center;text-align:center;font:700 28px/1 var(--font-display);font-variant-numeric:tabular-nums}
+.wc-ring b small{display:block;font:600 12px var(--font-body);color:var(--ink-muted);margin-top:2px}
+.wc-row em{font-style:normal;color:var(--ink-muted);font-size:13px}
+.wc-rate{font-size:13px;color:var(--ink-muted);margin:-4px 0 4px}
+.wc-warn{display:grid;gap:6px;margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(217,152,26,.14);font-size:14px;line-height:1.4}
+.wc-warn div::before{content:"! ";font-weight:800;color:#B7791F}
 .wc-rows{display:grid;gap:6px;min-width:0}
 .wc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;font-size:14px}
 .wc-row span:last-child{font-variant-numeric:tabular-nums;color:var(--ink-muted);font-size:13px}
-.wc-row.ok span:first-child::before{content:"✓ ";color:#16A34A;font-weight:700}
+.wc-row.ok span:first-child::before{content:"+ ";color:#16A34A;font-weight:700}
 .wc-row.no span:first-child::before{content:"○ ";color:var(--ink-muted)}
 .wc-bar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
 .wc-bar i{display:block;height:100%;background:#D7263D;border-radius:3px}
@@ -161,11 +184,11 @@
 
   // ---------- MUNDIAL ----------
   function renderM(){
-    const x = get(today), sc = score(x), P = parts(x), sk = streak(), dl = daysLeft();
+    const x = get(today), sc = pts(x), P = parts(x), sk = streak(), dl = daysLeft(), Wn = warns(), pc = Math.min(1, sc/TG.goal);
     const W = weeks(), last = W.length ? W[W.length-1] : null, c = last && cmp(last);
     const sel = ld('wc_sel', null), selDays = sel ? Math.ceil((new Date(sel+'T12:00:00') - Date.now())/864e5) : null;
     const plan = typeof dayPlan==='function' ? dayPlan() : null;
-    const R = 2*Math.PI*40, off = R*(1-sc/100);
+    const R = 2*Math.PI*40, off = R*(1-pc);
     const tm = NINES.map(n => [n.split(' ')[0], testMin(n)]);
     pM.innerHTML =
       '<section class="wc-hero" aria-label="'+T('Contagem para o Mundial','World Cup countdown')+'"><div class="k">'+T('Mundial 2027 · Austrália','World Cup 2027 · Australia')+'</div>'
@@ -176,11 +199,12 @@
       +'<div class="wc-sel">'+(sel && selDays>0 ? '<span>'+T('Convocatória em','Squad named in')+' <b>'+selDays+'</b> '+T('dias','days')+'</span>' : '<span>'+T('Data da convocatória dos 33:','Date the 33 are named:')+'</span>')
       +'<input type="date" id="wcsel" value="'+esc(sel||'')+'" min="'+today+'" max="2027-10-03" aria-label="'+T('Data da convocatória','Squad announcement date')+'"></div></section>'
 
-      +'<section class="wc-card"><h2>'+T('Hoje','Today')+'</h2><div class="sub">'+T('Cinco coisas, todos os dias, até ao avião. Faltam ','Five things, every day, until the plane. ')+'<b>'+dl+'</b>'+T(' dias: cada um conta.',' days left: every one counts.')+'</div>'
-      +'<div class="wc-day"><div class="wc-ring"><svg viewBox="0 0 92 92"><circle cx="46" cy="46" r="40" fill="none" stroke="var(--surface-2)" stroke-width="10"/><circle cx="46" cy="46" r="40" fill="none" stroke="'+(sc===100?'#16A34A':'#D7263D')+'" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+R.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg><b>'+sc+'%</b></div>'
-      +'<div class="wc-rows">'+P.map(p=>'<div class="wc-row '+(p.v>=1?'ok':'no')+'"><span>'+p.n+'</span><span>'+p.txt+'</span><div class="wc-bar"><i style="width:'+Math.round(p.v*100)+'%"></i></div></div>').join('')+'</div></div>'
-      +'<div class="wc-strk"><b>'+sk+'</b><span>'+(sk===1?T('dia perfeito seguido','perfect day in a row'):T('dias perfeitos seguidos','perfect days in a row'))+(sk?'':T(' · hoje pode ser o primeiro',' · today can be the first'))+'</span></div>'
-      +'<button type="button" class="wc-go" data-go="diario">'+(sc===100?T('Dia cumprido · ver ou corrigir','Day done · view or edit'):T('Registar o dia','Log today'))+'</button></section>'
+      +'<section class="wc-card"><h2>'+T('Hoje','Today')+'</h2><div class="sub">'+T('Objetivo: ','Goal: ')+'<b>'+TG.goal+T(' pontos',' points')+'</b>'+T(' por dia, como quiseres: rugby visto, passes, pontapés, pensar o jogo, corpo. Faltam ',' a day, any mix: rugby watched, passes, kicks, thinking the game, body. ')+'<b>'+dl+'</b>'+T(' dias.',' days left.')+'</div>'
+      +'<div class="wc-day"><div class="wc-ring"><svg viewBox="0 0 92 92"><circle cx="46" cy="46" r="40" fill="none" stroke="var(--surface-2)" stroke-width="10"/><circle cx="46" cy="46" r="40" fill="none" stroke="'+(pc>=1?'#16A34A':'#D7263D')+'" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+R.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg><b>'+sc+'<small>/ '+TG.goal+'</small></b></div>'
+      +'<div class="wc-rows">'+P.map(p=>'<div class="wc-row '+(p.pts>0?'ok':'no')+'"><span>'+p.n+' <em>'+p.txt+'</em></span><span>+'+Math.round(p.pts)+'</span><div class="wc-bar"><i style="width:'+Math.min(100,Math.round(p.pts/TG.goal*100))+'%"></i></div></div>').join('')+'</div></div>'
+      +(Wn.length ? '<div class="wc-warn">'+Wn.map(w=>'<div>'+w+'</div>').join('')+'</div>' : '')
+      +'<div class="wc-strk"><b>'+sk+'</b><span>'+(sk===1?T('dia seguido com o objetivo','day in a row on target'):T('dias seguidos com o objetivo','days in a row on target'))+(sk?'':T(' · hoje pode ser o primeiro',' · today can be the first'))+'</span></div>'
+      +'<button type="button" class="wc-go" data-go="diario">'+(pc>=1?T('Objetivo cumprido · registar mais','Goal hit · log more'):T('Faltam ','')+Math.max(0,TG.goal-sc)+T(' pontos · registar',' points to go · log'))+'</button></section>'
 
       +'<section class="wc-card"><h2>'+T('Corrida ao 9','Race for the 9 shirt')+'</h2>'
       +(c ? '<div class="sub">'+T('Semana ','Week ')+last.week+(last.live?T(' (em curso)',' (in progress)'):'')+': '+(c.n===4?T('foste o melhor dos três 9 nas 4 métricas.','you beat both other 9s on all 4 metrics.'):c.n?T('à frente dos dois em '+c.n+' de 4 métricas.','ahead of both on '+c.n+' of 4 metrics.'):T('atrás de um deles em todas as métricas.','behind one of them on every metric.'))+'</div>'
@@ -189,9 +213,9 @@
       +'<div class="wc-msg">'+T('Minutos em testes nesta janela: ','Test minutes in this window: ')+tm.map(([n,m])=>n+' <b>'+Math.round(m)+'</b>').join(' · ')+' · '+T('tu','you')+' <b>0</b>. '+T('Nos treinos já ganhas. O que falta é entrar nos 23: pergunta ao treinador o que te separa e treina exatamente isso.','You already win in training. What is missing is the 23: ask the coach what separates you and train exactly that.')+'</div>'
       +'<button type="button" class="wc-go alt" data-go="rivais">'+T('Ver todas as semanas','See every week')+' ›</button></section>'
 
-      +'<section class="wc-card"><h2>'+T('Até ao Mundial','Until the World Cup')+'</h2><div class="sub">'+T('Se cumprires o dia, todos os dias que faltam:','If you hit the day, every day left:')+'</div>'
-      +'<div class="wc-big"><div><b>'+n0(dl*(TG.passL+TG.passR))+'</b><small>'+T('passes','passes')+'</small></div><div><b>'+n0(dl*(TG.box+TG.kick))+'</b><small>'+T('pontapés','kicks')+'</small></div><div><b>'+n0(dl*TG.watch/60)+' h</b><small>'+T('de rugby visto','of rugby watched')+'</small></div></div>'
-      +'<div class="sub" style="margin-top:10px">'+T('Já feitos: ','Done so far: ')+n0(total('pass'))+T(' passes · ',' passes · ')+n0(total('kick'))+T(' pontapés · ',' kicks · ')+n0(total('watch')/60)+T(' h de rugby.',' h of rugby.')+'</div></section>'
+      +'<section class="wc-card"><h2>'+T('Até ao Mundial','Until the World Cup')+'</h2><div class="sub">'+T('Feito até agora. Faltam ','Done so far. ')+dl+T(' dias para somar.',' days left to add to it.')+'</div>'
+      +'<div class="wc-big"><div><b>'+Object.values(LOG).filter(done).length+'</b><small>'+T('dias com o objetivo','days on target')+'</small></div><div><b>'+n0(total('pass'))+'</b><small>'+T('passes','passes')+'</small></div><div><b>'+fx((total('watch')/60).toFixed(1))+' h</b><small>'+T('de rugby visto','of rugby watched')+'</small></div></div>'
+      +'<div class="sub" style="margin-top:10px">'+n0(total('kick'))+T(' pontapés · ',' kicks · ')+n0(Object.values(LOG).reduce((a,x)=>a+pts(x),0))+T(' pontos no total.',' points in total.')+'</div></section>'
 
       +(plan ? '<section class="wc-card"><h2>'+T('Carga','Load')+'</h2><div class="sub">'+T(DAYTXT[plan.k][1],DAYTXT[plan.k][2])+(plan.ratio!=null&&plan.ratio>=.05?' · '+plan.ratio.toFixed(2).replace('.',EN?'.':',')+T(' vs. o teu habitual',' vs. your usual'):T(' · sem treinos com GPS nos últimos 7 dias',' · no GPS sessions in the last 7 days'))+'</div><button type="button" class="wc-go alt" data-go="hoje">'+T('Ver carga e GPS','See load and GPS')+' ›</button></section>' : '');
     pM.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.go)));
@@ -209,29 +233,30 @@
   // ---------- DIÁRIO ----------
   let dSel = today;
   function renderD(){
-    const x = get(dSel), sc = score(x), th = x.think || {};
-    const wk = []; for(let i=6;i>=0;i--){ const d = addD(today,-i); wk.push([d, score(get(d))]); }
+    const x = get(dSel), sc = pts(x), th = x.think || {}, P = parts(x), by = {}; P.forEach(p => by[p.k] = p);
+    const wk = []; for(let i=6;i>=0;i--){ const d = addD(today,-i); wk.push([d, pts(get(d))]); }
+    const hp = k => '+'+Math.round(by[k].pts)+' pts';
     const stp = (k, lb, steps) => '<div class="wc-step" data-k="'+k+'"><span class="lb">'+lb+'</span><button type="button" class="m" data-d="-'+steps[0]+'" aria-label="'+T('menos','less')+' '+steps[0]+'">−</button><b>'+(x[k]||0)+'</b>'+steps.map(s=>'<button type="button" data-d="'+s+'">+'+s+'</button>').join('')+'</div>';
     pD.innerHTML =
-      '<div class="wc-dnav"><button type="button" id="wcprev" aria-label="'+T('Dia anterior','Previous day')+'">‹</button><b>'+(dSel===today?T('Hoje','Today'):dShort(dSel))+' · '+sc+'%</b><button type="button" id="wcnext" aria-label="'+T('Dia seguinte','Next day')+'"'+(dSel>=today?' disabled':'')+'>›</button></div>'
+      '<div class="wc-dnav"><button type="button" id="wcprev" aria-label="'+T('Dia anterior','Previous day')+'">‹</button><b>'+(dSel===today?T('Hoje','Today'):dShort(dSel))+' · '+sc+' / '+TG.goal+' pts</b><button type="button" id="wcnext" aria-label="'+T('Dia seguinte','Next day')+'"'+(dSel>=today?' disabled':'')+'>›</button></div>'
       +'<section class="wc-card">'
-      +'<div class="wc-item"><h3>'+T('Ver rugby','Watch rugby')+'<span data-h="watch">'+(x.watch||0)+' / '+TG.watch+' min</span></h3>'+stp('watch',T('Minutos','Minutes'),[5,15,30])
+      +'<div class="wc-item"><h3>'+T('Ver rugby','Watch rugby')+'<span data-h="watch">'+hp('watch')+'</span></h3><div class="wc-rate">'+T('1 ponto por minuto','1 point per minute')+'</div>'+stp('watch',T('Minutos','Minutes'),[5,15,30])
       +'<div class="wc-txt" style="margin-top:8px"><label>'+T('O que viste (jogo, 9 a estudar, os teus clipes)','What you watched (match, 9 to study, your clips)')+'<input type="text" data-t="what" maxlength="120" value="'+esc(x.what||'')+'"></label></div></div>'
-      +'<div class="wc-item"><h3>'+T('Passes','Passes')+'<span data-h="pass">'+((x.passL||0)+(x.passR||0))+' / '+(TG.passL+TG.passR)+'</span></h3>'+stp('passL',T('Esquerda','Left'),[10,25,50])+stp('passR',T('Direita','Right'),[10,25,50])+'</div>'
-      +'<div class="wc-item"><h3>'+T('Pontapés','Kicks')+'<span data-h="kick">'+((x.box||0)+(x.kick||0))+' / '+(TG.box+TG.kick)+'</span></h3>'+stp('box',T('Box kicks','Box kicks'),[5,10])+stp('kick',T('Saída/outros','Exit/other'),[5,10])+'</div>'
-      +'<div class="wc-item"><h3>'+T('Pensar o jogo','Think the game')+'<span data-h="think">'+(thinkOk(x)?T('feito','done'):T('3 respostas','3 answers'))+'</span></h3><div class="wc-txt">'
+      +'<div class="wc-item"><h3>'+T('Passes','Passes')+'<span data-h="pass">'+hp('pass')+'</span></h3><div class="wc-rate">'+T('½ ponto por passe · os dois lados','½ point per pass · both sides')+'</div>'+stp('passL',T('Esquerda','Left'),[10,25,50])+stp('passR',T('Direita','Right'),[10,25,50])+'</div>'
+      +'<div class="wc-item"><h3>'+T('Pontapés','Kicks')+'<span data-h="kick">'+hp('kick')+'</span></h3><div class="wc-rate">'+T('Box kick 1,5 pontos · outros 1 ponto','Box kick 1.5 points · others 1 point')+'</div>'+stp('box',T('Box kicks','Box kicks'),[5,10])+stp('kick',T('Saída/outros','Exit/other'),[5,10])+'</div>'
+      +'<div class="wc-item"><h3>'+T('Pensar o jogo','Think the game')+'<span data-h="think">'+hp('think')+'</span></h3><div class="wc-rate">'+T('10 pontos por resposta','10 points per answer')+'</div><div class="wc-txt">'
       +'<label>'+T('Uma coisa que fiz bem hoje','One thing I did well today')+'<textarea rows="2" data-th="good">'+esc(th.good||'')+'</textarea></label>'
       +'<label>'+T('Uma coisa que o 9 titular faria melhor','One thing the starting 9 would do better')+'<textarea rows="2" data-th="fix">'+esc(th.fix||'')+'</textarea></label>'
       +'<label>'+T('A decisão que vou treinar amanhã','The decision I will train tomorrow')+'<textarea rows="2" data-th="plan">'+esc(th.plan||'')+'</textarea></label></div></div>'
-      +'<div class="wc-item"><h3>'+T('Corpo','Body')+'<span data-h="body">'+(x.sleep?String(x.sleep).replace('.',EN?'.':','):'–')+' / '+TG.sleep+' h</span></h3>'
+      +'<div class="wc-item"><h3>'+T('Corpo','Body')+'<span data-h="body">'+hp('body')+'</span></h3><div class="wc-rate">'+T('Sono até 20 pontos ('+TG.sleep+' h) · treino, ginásio ou prehab 20','Sleep up to 20 points ('+TG.sleep+' h) · training, gym or prehab 20')+'</div>'
       +'<div class="wc-step" data-k="sleep"><span class="lb">'+T('Sono (h)','Sleep (h)')+'</span><button type="button" class="m" data-d="-0.5" aria-label="'+T('menos meia hora','half an hour less')+'">−</button><b>'+String(x.sleep||0).replace('.',EN?'.':',')+'</b><button type="button" data-d="0.5">+½</button><button type="button" data-d="1">+1</button></div>'
       +'<label class="wc-tog"><input type="checkbox" data-c="gym"'+(x.gym?' checked':'')+'> '+T('Treino, ginásio ou prehab feito (ou descanso planeado)','Training, gym or prehab done (or planned rest)')+'</label></div>'
       +'</section>'
-      +'<section class="wc-card"><h2>'+T('Últimos 7 dias','Last 7 days')+'</h2><div class="sub">'+T('Verde cheio: dia perfeito. Toca num dia para o abrir.','Solid green: perfect day. Tap a day to open it.')+'</div>'
-      +'<div class="wc-week">'+wk.map(([d,s])=>'<div role="button" tabindex="0" data-day="'+d+'" class="'+(s===100?'p':s>=50?'h':'')+(d===dSel?' t':'')+'"><b>'+s+'</b>'+new Date(d+'T12:00:00').toLocaleDateString(EN?'en-GB':'pt-PT',{weekday:'narrow'})+'</div>').join('')+'</div></section>'
+      +'<section class="wc-card"><h2>'+T('Últimos 7 dias','Last 7 days')+'</h2><div class="sub">'+T('Pontos por dia. Verde cheio: objetivo cumprido. Toca num dia para o abrir.','Points per day. Solid green: goal hit. Tap a day to open it.')+'</div>'
+      +'<div class="wc-week">'+wk.map(([d,s])=>'<div role="button" tabindex="0" data-day="'+d+'" class="'+(s>=TG.goal?'p':s>=TG.goal/2?'h':'')+(d===dSel?' t':'')+'"><b>'+s+'</b>'+new Date(d+'T12:00:00').toLocaleDateString(EN?'en-GB':'pt-PT',{weekday:'narrow'})+'</div>').join('')+'</div></section>'
       +'<details class="fold"><summary><span>'+T('Metas por dia','Daily targets')+'</span></summary><div class="wc-card"><div class="wc-tgt">'
-      +[['watch',T('Ver rugby (min)','Watch (min)')],['passL',T('Passes esquerda','Passes left')],['passR',T('Passes direita','Passes right')],['box',T('Box kicks','Box kicks')],['kick',T('Outros pontapés','Other kicks')],['sleep',T('Sono (h)','Sleep (h)')]].map(([k,n])=>'<label>'+n+'<input inputmode="decimal" data-tg="'+k+'" value="'+TG[k]+'"></label>').join('')
-      +'</div><div class="sub" style="margin-top:8px">'+T('Começam em valores de trabalho para um 9 internacional. Ajusta com o teu treinador.','They start at working values for an international 9. Adjust them with your coach.')+'</div></div></details>';
+      +[['goal',T('Objetivo diário (pontos)','Daily goal (points)')],['sleep',T('Sono para os 20 pontos (h)','Sleep for the 20 points (h)')]].map(([k,n])=>'<label>'+n+'<input inputmode="decimal" data-tg="'+k+'" value="'+TG[k]+'"></label>').join('')
+      +'</div><div class="sub" style="margin-top:8px">'+T('150 pontos é um dia sério: por exemplo 200 passes, 30 box kicks e as 3 respostas; ou, num dia de descanso, 90 minutos de rugby, as 3 respostas e boa recuperação.','150 points is a serious day: for example 200 passes, 30 box kicks and the 3 answers; or, on a rest day, 90 minutes of rugby, the 3 answers and good recovery.')+'</div></div></details>';
     pD.querySelector('#wcprev').addEventListener('click', () => { dSel = addD(dSel,-1); renderD(); });
     pD.querySelector('#wcnext').addEventListener('click', () => { if(dSel<today){ dSel = addD(dSel,1); renderD(); } });
     pD.querySelectorAll('.wc-step button').forEach(b => b.addEventListener('click', () => {
@@ -248,12 +273,10 @@
 
   // atualiza só os números do Diário (sem redesenhar: o toque seguinte cai no mesmo botão, a página não salta)
   function refreshD(){
-    const x = get(dSel), P = parts(x), by = {}; P.forEach(p => by[p.k] = p);
-    const set = (k, t) => { const e = pD.querySelector('[data-h="'+k+'"]'); if(e) e.textContent = t; };
-    set('watch', by.watch.txt); set('pass', by.pass.txt); set('kick', by.kick.txt); set('think', by.think.txt);
-    set('body', (x.sleep?String(x.sleep).replace('.',EN?'.':','):'–')+' / '+TG.sleep+' h');
-    const sc = score(x), hd = pD.querySelector('.wc-dnav b'); if(hd) hd.textContent = (dSel===today?T('Hoje','Today'):dShort(dSel))+' · '+sc+'%';
-    const cell = pD.querySelector('[data-day="'+dSel+'"]'); if(cell){ cell.querySelector('b').textContent = sc; cell.classList.toggle('p', sc===100); cell.classList.toggle('h', sc>=50 && sc<100); }
+    const x = get(dSel), P = parts(x);
+    P.forEach(p => { const e = pD.querySelector('[data-h="'+p.k+'"]'); if(e) e.textContent = '+'+Math.round(p.pts)+' pts'; });
+    const sc = pts(x), hd = pD.querySelector('.wc-dnav b'); if(hd) hd.textContent = (dSel===today?T('Hoje','Today'):dShort(dSel))+' · '+sc+' / '+TG.goal+' pts';
+    const cell = pD.querySelector('[data-day="'+dSel+'"]'); if(cell){ cell.querySelector('b').textContent = sc; cell.classList.toggle('p', sc>=TG.goal); cell.classList.toggle('h', sc>=TG.goal/2 && sc<TG.goal); }
     renderM();
   }
 
