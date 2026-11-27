@@ -123,7 +123,7 @@
 .wc-big small{display:block;font-size:12px;color:var(--ink-muted);margin-top:2px}
 .wc-msg{margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(215,38,61,.08);font-size:14px;line-height:1.45}
 .wc-msg b{color:#D7263D}
-.wc-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 14px}
+.wc-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 14px}
 .wc-links button{min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 15px var(--font-body);cursor:pointer}
 .wc-dnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0}
 .wc-dnav button{min-width:48px;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font:700 20px var(--font-body);color:var(--ink);cursor:pointer}
@@ -158,17 +158,50 @@
   // ---------- páginas novas ----------
   const hoje = document.getElementById('pg-hoje'); if(!hoje) return;
   const mk = id => { const p = document.createElement('div'); p.className = 'pg'; p.id = 'pg-'+id; hoje.before(p); return p; };
-  const pM = mk('mundial'), pD = mk('diario'), pR = mk('rivais');
+  let dSel = today;
+  const pM = mk('mundial'), pR = mk('rivais');
+  // ---------- Registar o dia: folha que sobe de baixo (já não é um separador) ----------
+  const sh = document.createElement('div'); sh.className = 'wc-sh'; sh.hidden = true;
+  sh.innerHTML = '<div class="wc-sh-bg"></div><div class="wc-sh-p" role="dialog" aria-modal="true" aria-label="'+T('Registar o dia','Log the day')+'"><div class="wc-sh-h"><span class="wc-grab" aria-hidden="true"></span><b>'+T('Registar o dia','Log the day')+'</b><button type="button" class="wc-sh-x">'+T('Feito','Done')+'</button></div><div class="wc-sh-c"></div></div>';
+  document.body.appendChild(sh);
+  const pD = sh.querySelector('.wc-sh-c'), panel = sh.querySelector('.wc-sh-p');
+  let shOpen = false;
+  const reduceM = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function openLog(d){
+    if(shOpen) return; shOpen = true; if(d) dSel = d; renderD();
+    sh.hidden = false; document.body.style.overflow = 'hidden'; pD.scrollTop = 0;
+    const cur = history.state || {}; try{ history.pushState({n:cur.n, g:1, wcs:1}, ''); }catch(e){}
+    if(!reduceM()){ sh.querySelector('.wc-sh-bg').animate([{opacity:0},{opacity:1}], {duration:200}); panel.animate([{transform:'translateY(100%)'},{transform:'none'}], {duration:320, easing:'cubic-bezier(.2,.8,.2,1)'}); }
+  }
+  function closeLog(){
+    if(!shOpen) return; shOpen = false; document.body.style.overflow = ''; renderM();
+    if(document.activeElement && pD.contains(document.activeElement)) document.activeElement.blur();
+    const end = () => { sh.hidden = true; panel.style.transform = ''; };
+    if(reduceM()) return end();
+    sh.querySelector('.wc-sh-bg').animate([{opacity:1},{opacity:0}], {duration:220, fill:'forwards'}).onfinish = () => { sh.querySelector('.wc-sh-bg').getAnimations().forEach(a=>a.cancel()); };
+    panel.animate([{transform:panel.style.transform||'none'},{transform:'translateY(100%)'}], {duration:240, easing:'cubic-bezier(.4,0,1,1)', fill:'forwards'}).onfinish = () => { panel.getAnimations().forEach(a=>a.cancel()); end(); };
+  }
+  const back = () => { if(history.state && history.state.wcs) history.back(); else closeLog(); };
+  addEventListener('popstate', () => { if(shOpen) closeLog(); });
+  sh.querySelector('.wc-sh-x').addEventListener('click', back);
+  sh.querySelector('.wc-sh-bg').addEventListener('click', back);
+  // puxar a pega (ou a folha, quando está no topo) para baixo fecha
+  let y0 = null, dy = 0;
+  panel.addEventListener('touchstart', e => { const onHead = e.target.closest('.wc-sh-h'); if(!onHead && pD.scrollTop > 0){ y0 = null; return; } y0 = e.touches[0].clientY; dy = 0; }, {passive:true});
+  panel.addEventListener('touchmove', e => { if(y0==null) return; dy = e.touches[0].clientY - y0; if(dy > 0) panel.style.transform = 'translateY('+dy+'px)'; }, {passive:true});
+  panel.addEventListener('touchend', () => { if(y0==null) return; y0 = null; if(dy > 110) back(); else { if(!reduceM() && dy > 0) panel.animate([{transform:panel.style.transform},{transform:'none'}], {duration:240, easing:'cubic-bezier(.34,1.56,.64,1)'}); panel.style.transform = ''; } });
+  addEventListener('keydown', e => { if(e.key==='Escape' && shOpen) back(); });
+  window.WCLOG = openLog;
   hoje.classList.remove('on'); pM.classList.add('on');
 
   // ---------- barra de baixo nova ----------
   const ICO = {
     mundial:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
-    diario:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 12l2 2 4-4"/>',
+    coach:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M8 12h2l1.5-2.5 2 4.5 1-2H16"/>',
     rivais:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 2 6 5.5"/>',
     hoje:'<path d="M4 15a8 8 0 1 1 16 0"/><path d="M12 15l4-5"/>',
     corpo:'<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>'};
-  const NAMES = {mundial:T('Mundial','World Cup'), diario:T('Diário','Daily'), rivais:T('Rivais','Rivals'), hoje:T('Carga','Load'), corpo:T('Corpo','Body')};
+  const NAMES = {mundial:T('Mundial','World Cup'), coach:T('Rotinas','Routines'), rivais:T('Rivais','Rivals'), hoje:T('Carga','Load'), corpo:T('Corpo','Body')};
   const bar = document.getElementById('tabbar');
   if(bar){
     bar.innerHTML = Object.keys(NAMES).map(k => '<button type="button" data-p="'+k+'"'+(k==='mundial'?' class="on"':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICO[k]+'</svg><span>'+NAMES[k]+'</span></button>').join('');
@@ -176,7 +209,7 @@
   }
   // a Carga abre o resto (Semana, Evolução, Coach, Definições)
   const links = document.createElement('div'); links.className = 'wc-links';
-  links.innerHTML = [['semana',T('Semana','Week')],['evol',T('Evolução','Progress')],['coach',T('Rotinas (Coach)','Routines (Coach)')],['mais',T('Sessões e definições','Sessions and settings')]].map(([k,n])=>'<button type="button" data-go="'+k+'">'+n+' ›</button>').join('');
+  links.innerHTML = [['semana',T('Semana','Week')],['evol',T('Evolução','Progress')],['mais',T('Sessões e definições','Sessions and settings')]].map(([k,n])=>'<button type="button" data-go="'+k+'">'+n+' ›</button>').join('');
   links.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if(b) showTab(b.dataset.go); });
   const hh = hoje.querySelector('.hero'); if(hh) hh.after(links); else hoje.prepend(links);
   // o "Ver troféus" do Hoje deixa de existir (as medalhas saem)
@@ -218,7 +251,8 @@
       +'<div class="sub" style="margin-top:10px">'+n0(total('kick'))+T(' pontapés · ',' kicks · ')+n0(Object.values(LOG).reduce((a,x)=>a+pts(x),0))+T(' pontos no total.',' points in total.')+'</div></section>'
 
       +(plan ? '<section class="wc-card"><h2>'+T('Carga','Load')+'</h2><div class="sub">'+T(DAYTXT[plan.k][1],DAYTXT[plan.k][2])+(plan.ratio!=null&&plan.ratio>=.05?' · '+plan.ratio.toFixed(2).replace('.',EN?'.':',')+T(' vs. o teu habitual',' vs. your usual'):T(' · sem treinos com GPS nos últimos 7 dias',' · no GPS sessions in the last 7 days'))+'</div><button type="button" class="wc-go alt" data-go="hoje">'+T('Ver carga e GPS','See load and GPS')+' ›</button></section>' : '');
-    pM.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.go)));
+    pM.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => b.dataset.go==='diario' ? openLog(today) : showTab(b.dataset.go)));
+    pM.querySelectorAll('.wc-row').forEach(r => { r.setAttribute('role','button'); r.tabIndex = 0; r.addEventListener('click', () => openLog(today)); });
     const si = pM.querySelector('#wcsel'); if(si) si.addEventListener('change', () => { sv('wc_sel', si.value || null); renderM(); });
     tick();
   }
@@ -230,8 +264,7 @@
   }
   setInterval(() => { if(pM.classList.contains('on') && !document.hidden) tick(); }, 1000);
 
-  // ---------- DIÁRIO ----------
-  let dSel = today;
+  // ---------- DIÁRIO (dentro da folha Registar o dia) ----------
   function renderD(){
     const x = get(dSel), sc = pts(x), th = x.think || {}, P = parts(x), by = {}; P.forEach(p => by[p.k] = p);
     const wk = []; for(let i=6;i>=0;i--){ const d = addD(today,-i); wk.push([d, pts(get(d))]); }
@@ -301,11 +334,15 @@
   }
 
   renderM(); renderD(); renderR();
+  const fab = document.createElement('button'); fab.type = 'button'; fab.className = 'wc-fab'; fab.innerHTML = '<b>+</b>'+T('Registar','Log');
+  fab.setAttribute('aria-label', T('Registar o dia','Log the day')); fab.addEventListener('click', () => openLog(today)); document.body.appendChild(fab);
+  const fabSync = () => { const on = document.querySelector('.pg.on'); fab.hidden = !on || on.id==='pg-mundial'; };
+  fabSync(); document.querySelectorAll('.pg').forEach(p => new MutationObserver(fabSync).observe(p, {attributes:true, attributeFilter:['class']}));
 
   // ---------- coesão: cada página abre com o mesmo cabeçalho; as subpáginas da Carga têm "‹ Carga" ----------
-  const PH = {diario:[T('Diário','Daily'),T('O teu trabalho de hoje','Your work today')], rivais:[T('Rivais','Rivals'),''],
+  const PH = {rivais:[T('Rivais','Rivals'),''],
     hoje:[T('Carga','Load'),''], corpo:[T('Corpo','Body'),T('Peso, força e salto','Weight, strength and jump')],
-    semana:[T('Semana','Week'),'',1], evol:[T('Evolução','Progress'),'',1], coach:[T('Rotinas','Routines'),T('Prehab, recuperação e mental','Prehab, recovery and mental'),1], mais:[T('Sessões e definições','Sessions and settings'),'',1], trofeus:[T('Troféus','Trophies'),'',1]};
+    semana:[T('Semana','Week'),'',1], evol:[T('Evolução','Progress'),'',1], coach:[T('Rotinas','Routines'),T('Prehab, recuperação e mental','Prehab, recovery and mental')], mais:[T('Sessões e definições','Sessions and settings'),'',1], trofeus:[T('Troféus','Trophies'),'',1]};
   const kick = () => T('Mundial 2027 · faltam ','World Cup 2027 · ')+daysLeft()+T(' dias',' days to go');
   const head = () => Object.keys(PH).forEach(id => {
     const pg = document.getElementById('pg-'+id); if(!pg) return;
@@ -334,6 +371,19 @@
 #pg-hoje > .hero,#pg-semana #s-wk > h2,#s-evol .head > div:first-child > h2,#pg-coach .ch > h2,#pg-coach .ch > h2 + .sub,h2.pgt,#pg-corpo > .more-btn{display:none}
 .card,.rsp,.wc-card,.wc-hero,.hero{border-radius:14px}
 #pg-diario .wc-dnav{margin-top:4px}
+.wc-sh{position:fixed;inset:0;z-index:60}
+.wc-sh-bg{position:absolute;inset:0;background:rgba(14,26,46,.45)}
+.wc-sh-p{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - env(safe-area-inset-top,0px) - 24px);display:flex;flex-direction:column;background:var(--bg);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18)}
+.wc-sh-h{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:18px 16px 8px;position:relative;touch-action:none}
+.wc-sh-h b{font:700 24px var(--font-display)}
+.wc-grab{position:absolute;top:7px;left:50%;width:40px;height:5px;margin-left:-20px;border-radius:3px;background:var(--line)}
+.wc-sh-x{min-height:44px;padding:0 16px;border:0;border-radius:999px;background:#D7263D;color:#fff;font:700 15px var(--font-body);cursor:pointer}
+.wc-sh-c{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.wc-sh-c .wc-dnav{margin-top:4px}
+.wc-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:6px;min-height:52px;padding:0 18px;border:0;border-radius:999px;background:#D7263D;color:#fff;font:700 15px var(--font-body);box-shadow:0 6px 18px rgba(215,38,61,.35);cursor:pointer}
+.wc-fab b{font:700 22px/1 var(--font-body)}
+.wc-row[role=button]{cursor:pointer}
+.pg:not(#pg-mundial)::after{content:"";display:block;height:64px}
 input,select,textarea{font-size:16px!important}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{overscroll-behavior-y:none}

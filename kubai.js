@@ -3,7 +3,7 @@
 // Os ícones mexem-se: ao abrir o separador, ao tocar (também no que já está aberto) e ao passar o rato no computador.
 (function(){
   const B = 'https://cdn.jsdelivr.net/npm/kubai-icons@0.11.0/dist/';
-  const MAP = {mundial:'trophy', diario:'clipboard-check', rivais:'users', hoje:'gauge', corpo:'dumbbell'};
+  const MAP = {mundial:'trophy', coach:'heart-pulse', rivais:'users', hoje:'gauge', corpo:'dumbbell'};
   const go = () => {
     const bar = document.getElementById('tabbar'); if(!bar) return;
     const keys = Object.keys(MAP);
