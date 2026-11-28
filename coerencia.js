@@ -34,6 +34,7 @@ html body .hero button,html body .ch .chips button,html body [class*="hero"] .ch
 /* números e passos: 12 px */
 html body .el-seg button,html body .el-rpe button,html body .wc-step button,html body .crate button{border-radius:var(--r-tile)!important}
 html body .el-rpe button.on{background:var(--navy-ink)!important}
+html body #pg-coach .crate button[aria-pressed=true]{background:var(--navy-ink)!important;border-color:transparent!important;color:#fff!important}
 /* setas de dia: círculos */
 html body .wc-dnav button,html body .cday button{border-radius:999px!important;min-width:44px;min-height:44px}
 /* apagar: discreto e com alvo de 44 px */
