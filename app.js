@@ -15,12 +15,23 @@ const teamOf = s => s.team || 'Seleção';
 const TEAMS = ['Seleção','Lusitanos'];
 
 // carga vs. habitual: soma dos últimos 7 dias / (soma dos últimos 28 dias / 4). Uma só definição para toda a app.
-// Semanas sem GPS (gpsGap, ex.: Agronomia): treinaste na mesma, só não há metros. Contam como uma semana normal tua:
-// os dias sem dados valem a tua média dos outros dias da janela (em vez de 0, que baixava o habitual de forma falsa).
+// Sem GPS a carga mantém-se: em qualquer dia conta a janela que acaba na última sessão com GPS até esse dia,
+// por isso os dias sem GPS (descanso, ou treino sem colete) não fazem a carga cair para 0.
+// Semanas sem GPS (gpsGap, ex.: Agronomia, ou qualquer semana sem nenhuma sessão): treinaste na mesma, só não há metros.
+// Contam como uma semana normal tua: os dias sem dados valem a tua média dos outros dias da janela (em vez de 0).
 // Se adicionares em Mais as sessões dessa semana (com valores estimados), passam a contar os teus números em vez da média.
 const GAP_WEEKS = new Set(SESSIONS.filter(s=>s.gpsGap && !SESSIONS.some(x=>x.added && x.week===s.week)).map(s=>s.week));
+let gapsDone = false;
+function fillGapWeeks(){
+  if(gapsDone || !SESSIONS.length) return; gapsDone = true;
+  const have = new Set(SESSIONS.map(s=>REG.isoWeek(s.date)));
+  const d = new Date(SESSIONS.reduce((a,s)=>s.date<a?s.date:a, SESSIONS[0].date)+'T12:00:00'), end = new Date();
+  while(d <= end){ const w = REG.isoWeek(isoDay(d)); if(!have.has(w)) GAP_WEEKS.add(w); d.setDate(d.getDate()+7); }
+}
 function meanRd(days, ref){
-  const end = new Date(ref.date+'T12:00:00');
+  fillGapWeeks();
+  const lastGps = SESSIONS.reduce((a,s)=>s.date<=ref.date && s.date>a ? s.date : a, '');
+  const end = new Date((lastGps||ref.date)+'T12:00:00');
   let valid = 0, sum = 0;
   for(let i=0;i<days;i++){ const d = new Date(end); d.setDate(d.getDate()-i); const k = isoDay(d);
     if(GAP_WEEKS.has(REG.isoWeek(k))) continue; valid++; SESSIONS.forEach(s=>{ if(s.date===k) sum += s.rd; }); }
@@ -37,7 +48,7 @@ function dayPlan(t){
   t = t || isoDay(new Date());
   const past = SESSIONS.filter(x=>x.date<=t), s = past.length ? past[past.length-1] : last;
   const dd = Math.max(0, Math.round((new Date(t+'T00:00:00')-new Date(s.date+'T00:00:00'))/DAY));
-  const hard = s.type==='Match' || s.rd>HEAVY, ratio = loadRatio({date:t});   // carga de hoje (desce nos dias de descanso), não a da última sessão
+  const hard = s.type==='Match' || s.rd>HEAVY, ratio = loadRatio({date:t});   // carga de hoje: fica igual à da última sessão com GPS até haver dados novos
   const nm = window.NEXT_MATCH || null, dm = nm ? Math.round((new Date(nm.date+'T00:00:00')-new Date(t+'T00:00:00'))/DAY) : null;
   let k = 'normal';
   if(dm===0) k = 'match'; else if(hard && dd===0) k = 'same'; else if(hard && dd===1) k = 'next'; else if(dm===1) k = 'pre';
@@ -400,7 +411,7 @@ function renderLoad(){
    +'<div><small>Distância nos últimos 7 dias</small><span class="num">'+f1(ac/1000)+' km</span><small>Teu habitual: '+f1(ch/1000)+' km/semana</small></div>'
    +'<div><small>Dias pesados (>3500 m)</small><span class="num">'+heavy+'</span><small>'+(matches?matches+(matches===1?' jogo':' jogos')+' nesta janela':'Sem jogos nesta janela')+'</small></div>'
    +'</div>'
-   +'<div class="sub"><b>'+z.b+(ratio?' · '+ratio.toFixed(2).replace('.',','):'')+'.</b> '+z.t+' Como ler: compara a carga dos últimos 7 dias com o que costumas fazer. Entre 0,8 e 1,3 é a zona segura; acima de 1,5 o risco de lesão sobe. É um guia, não uma regra: manda o que sentes e o que o teu S&amp;C decidir.'+(dd>0?' Último GPS há '+dd+' d.':'')+'</div>';
+   +'<div class="sub"><b>'+z.b+(ratio?' · '+ratio.toFixed(2).replace('.',','):'')+'.</b> '+z.t+' Como ler: compara a carga dos últimos 7 dias com o que costumas fazer. Entre 0,8 e 1,3 é a zona segura; acima de 1,5 o risco de lesão sobe. É um guia, não uma regra: manda o que sentes e o que o teu S&amp;C decidir.'+(dd>0?' Último GPS há '+dd+' d.: sem dados novos, a carga fica igual à dessa sessão (não cai para 0).':'')+'</div>';
 }
 
 renderTeamCmp(); renderLoad(); renderLatest(last); renderKpis(); renderPos(); initWkPick(); renderWeekView(); renderGames(); renderLog();
