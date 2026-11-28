@@ -50,6 +50,11 @@ html body .el-pg-h{padding-left:16px!important;min-height:52px}
 .co-bk[hidden]{display:none!important}
 .el-pg .co-bk{z-index:75;bottom:calc(20px + env(safe-area-inset-bottom,0px))}
 html body .el-pg-c{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))!important}
+/* datas: no iPhone o campo de data tem largura mínima própria e sai da caixa; assim cabe sempre */
+html body input[type="date"],html body input[type="time"],html body input[type="month"],html body input[type="datetime-local"]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;min-height:44px;text-align:left}
+html body input[type="date"]::-webkit-date-and-time-value,html body input[type="time"]::-webkit-date-and-time-value,html body input[type="month"]::-webkit-date-and-time-value{text-align:left;margin:0}
+html body input[type="date"]::-webkit-datetime-edit,html body input[type="time"]::-webkit-datetime-edit{padding:0}
+html body .el-f > *,html body .wc-tgt > *,html body label{min-width:0}
 /* toque: o botão encolhe um pouco, como o "+ Registar" */
 html body .wc-fab,html body .co-bk,html body .wc-go,html body button.pri,html body .cb.pri{transition:transform .12s ease}
 html body .wc-fab:active,html body .co-bk:active,html body .wc-go:active,html body button.pri:active,html body .cb.pri:active{transform:scale(.96)}
