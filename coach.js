@@ -271,8 +271,8 @@
   }
   function ratingBlock(kind, d){
     const e = d[kind];
-    const rate = [1,2,3,4,5].map(n => '<button type="button" data-act="rate" data-k="'+kind+'" data-v="'+n+'" aria-pressed="'+(e.rating===n)+'" aria-label="'+n+' / 5">'+n+'</button>').join('');
-    return '<div><small class="sub">'+T('Como correu? (opcional)','How did it go? (optional)')+'</small></div><div class="crate">'+rate+'</div>'
+    const rate = [1,2,3,4,5,6,7,8,9,10].map(n => '<button type="button" data-act="rate" data-k="'+kind+'" data-v="'+n+'" aria-pressed="'+(e.rating===n)+'" aria-label="RPE '+n+' / 10">'+n+'</button>').join('');
+    return '<div><small class="sub">'+T('Quão duro foi? RPE de 1 (muito leve) a 10 (máximo), opcional','How hard was it? RPE from 1 (very easy) to 10 (max), optional')+'</small></div><div class="crate">'+rate+'</div>'
       ;
   }
   function exList(kind, pl, ctx){
@@ -380,7 +380,7 @@
     const rated = []; Object.keys(LOG).forEach(k => { if(k > addDays(t,-14) && LOG[k].m && (LOG[k].m.done||[]).length && LOG[k].m.rating) rated.push(LOG[k].m.rating); });
     const avg = rated.length ? rated.reduce((a,b)=>a+b,0)/rated.length : null;
     let total = 0; Object.keys(LOG).forEach(k => KINDS.forEach(kind => { if(kDone(LOG[k], kind)) total++; }));
-    return '<div class="cpan"><div class="cst"><div><b>'+s+'</b><small>'+(s===1?T('dia seguido','day in a row'):T('dias seguidos','days in a row'))+'</small></div><div><b>'+total+'</b><small>'+T('skills feitas','skills done')+'</small></div><div><b>'+(avg==null?'–':num1(avg))+'</b><small>'+T('mental, média 14 d','mental, 14-day avg')+'</small></div></div>'
+    return '<div class="cpan"><div class="cst"><div><b>'+s+'</b><small>'+(s===1?T('dia seguido','day in a row'):T('dias seguidos','days in a row'))+'</small></div><div><b>'+total+'</b><small>'+T('skills feitas','skills done')+'</small></div><div><b>'+(avg==null?'–':num1(avg))+'</b><small>'+T('RPE mental, média 14 d','mental RPE, 14-day avg')+'</small></div></div>'
       +'<div class="cc"><h3>'+T('Esta semana','This week')+'</h3>'+bar('Prehab', ws.p, tgt('p'),'p')+bar(T('Recuperação','Recovery'), ws.r, tgt('r'),'r')+bar('Mental', ws.m, tgt('m'),'m')+bar('Box kick', ws.box, tgt('box'),'box')+bar(T('Passe','Passing'), ws.pass, tgt('pass'),'pass')+bar(T('Defesa','Defence'), ws.def, tgt('def'),'def')+'<button type="button" class="cb" data-act="gotg" style="width:100%">'+T('Mudar quantas vezes por semana','Change sessions per week')+'</button></div>'
       +'<div class="cc"><h3>'+T('Prancha','Plank')+'</h3><p class="w">'+pfmt(stp.secs)+' · '+plabel(stp.kg)+(PB.sessions===1?T(' · 1 sessão',' · 1 session'):T(' · '+PB.sessions+' sessões',' · '+PB.sessions+' sessions'))+'</p></div>'
       +'<div class="cc"><h3>'+T('8 semanas, com a tua carga','8 weeks, with your load')+'</h3><p class="w">'+T('Para ver se a prevenção acompanha as semanas pesadas.','To check that prevention keeps up with heavy weeks.')+'</p>'+rows+'</div>'
